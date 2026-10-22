@@ -1,0 +1,11 @@
+{
+  "title": "Machine Learning",
+  "pages": [
+    "what-is-ml",
+    "linear-regression",
+    "logistic-regression",
+    "loss-optimization",
+    "overfitting",
+    "evaluation"
+  ]
+}

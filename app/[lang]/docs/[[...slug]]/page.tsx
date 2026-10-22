@@ -8,7 +8,7 @@ import {
 } from "fumadocs-ui/layouts/docs/page";
 import { createRelativeLink } from "fumadocs-ui/mdx";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getMDXComponents } from "@/components/mdx";
 import { getPageImageUrl, getPageMarkdownUrl, gitConfig } from "@/lib/shared";
 import { source } from "@/lib/source";
@@ -17,6 +17,10 @@ export default async function Page(
   props: PageProps<"/[lang]/docs/[[...slug]]">,
 ) {
   const params = await props.params;
+  if (!params.slug || params.slug.length === 0) {
+    const prefix = params.lang === "en" ? "/en" : "";
+    redirect(`${prefix}/docs/python/environment`);
+  }
   const page = source.getPage(params.slug, params.lang);
   if (!page) notFound();
 

@@ -1,0 +1,168 @@
+---
+title: Content Outline
+description: A systematic AI learning path covering core principles, applied engineering, and model deployment
+---
+
+# Content Outline
+
+9 topics, 81 articles + 3 capstone projects.
+
+Learning goal: Starting from programming and math foundations, understand the core principles of machine learning, deep learning, and LLMs — and gain the ability to build AI applications independently, diagnose model problems, deploy inference services, and explain key techniques clearly.
+
+---
+
+## Track A · Understand How AI Works
+
+Goal: Understand how data is represented, how models learn, how parameters update, and how large language models generate content.
+
+### ① Python for ML · 7 pages
+
+- [Python Environment & Toolchain](/en/docs/python/environment) — Python version, uv, virtual environments, package management
+- [Python Syntax Cheatsheet](/en/docs/python/syntax) — basic syntax, functions & modules, exceptions & file handling
+- [Jupyter Notebook Workflow](/en/docs/python/jupyter) — interactive development, experiment logging, debugging
+- [NumPy Arrays & Vectorized Computing](/en/docs/python/numpy) — array shapes, broadcasting, vectorized computation
+- [Pandas Data Handling](/en/docs/python/pandas) — data reading, cleaning, aggregation & transformation
+- [Data Visualization](/en/docs/python/visualization) — matplotlib, distribution & relationship visualization
+- [Python for ML in Practice](/en/docs/python/python-for-ml) — full data reading, cleaning, analysis & experiment flow
+
+### ② Math Foundations · 6 pages
+
+- [Linear Algebra Basics](/en/docs/math/linear-algebra) — vectors, matrix multiplication, transpose & shape transforms
+- [Calculus Essentials](/en/docs/math/calculus) — derivatives, partial derivatives, chain rule & gradients
+- [Probability](/en/docs/math/probability) — conditional probability, expectation, variance & common distributions
+- [Statistics](/en/docs/math/statistics) — parameter estimation, sampling, hypothesis testing & correlation
+- [Optimization & Gradient Descent](/en/docs/math/optimization) — optimization objective, gradient descent, learning rate & convergence
+- [Math in ML](/en/docs/math/math-for-ml) — verifying math concepts with NumPy, random experiments & reproducibility
+
+### ③ Machine Learning · 10 pages
+
+- [What is Machine Learning](/en/docs/machine-learning/what-is-ml) — learning paradigms, supervised/unsupervised learning & problem types
+- [Data Splitting & Leakage](/en/docs/machine-learning/data-splitting) — train/val/test sets, cross-validation & data leakage
+- [Feature Engineering](/en/docs/machine-learning/feature-engineering) — missing values, encoding, standardization & feature selection
+- [Linear Regression](/en/docs/machine-learning/linear-regression) — least squares, analytical & gradient solutions
+- [Logistic Regression](/en/docs/machine-learning/logistic-regression) — sigmoid, binary classification, decision boundary & probability output
+- [Loss & Optimization](/en/docs/machine-learning/loss-optimization) — MSE, cross-entropy, objective functions & gradient descent
+- [Tree Models](/en/docs/machine-learning/tree-models) — decision trees, random forests, gradient boosting
+- [Unsupervised Learning](/en/docs/machine-learning/unsupervised) — clustering, dimensionality reduction & discovering data structure
+- [Overfitting & Regularization](/en/docs/machine-learning/overfitting) — bias & variance, L1/L2, early stopping
+- [Model Evaluation & Workflow](/en/docs/machine-learning/evaluation) — dummy baseline, metrics, class imbalance & precision/recall/F1, cross-validation, hyperparameter search, error analysis, model saving & inference
+
+### ④ Deep Learning · 9 pages
+
+- [The Single Neuron](/en/docs/deep-learning/neuron) — linear combination, bias, activation & geometric intuition
+- [Activation Functions](/en/docs/deep-learning/activations) — ReLU, Sigmoid, Tanh & gradient properties
+- [Neural Networks](/en/docs/deep-learning/neural-network) — layers, forward pass, weight initialization & representational capacity
+- [Backpropagation Basics](/en/docs/deep-learning/backpropagation-basics) — loss, computation graphs, chain rule & gradients
+- [Backpropagation in Depth](/en/docs/deep-learning/backpropagation-deep) — matrix form, gradient flow & multi-layer gradient computation
+- [Backpropagation in Practice](/en/docs/deep-learning/backpropagation-practice) — hand-written backprop in NumPy, numerical gradient checking
+- [PyTorch Basics](/en/docs/deep-learning/pytorch) — Tensor, autograd, computation graphs, Dataset & DataLoader
+- [Optimizers](/en/docs/deep-learning/optimizer) — SGD, Momentum, Adam, learning rate scheduling & gradient clipping
+- [The Training Loop](/en/docs/deep-learning/training-loop) — Batch, Epoch, validation, checkpointing, overfitting & training diagnostics
+
+### ⑤ Transformers & LLM · 14 pages
+
+- [Tokenization](/en/docs/transformers-llm/tokenization) — Token, BPE, vocabulary, encoding & decoding
+- [Embedding Intuition](/en/docs/transformers-llm/embedding-intuition) — Token Embedding, vector representation & semantic space
+- [Embedding in Practice](/en/docs/transformers-llm/embedding-practice) — loading embeddings, similarity computation & visualization
+- [Embedding Boundaries](/en/docs/transformers-llm/embedding-boundary) — representation limits, out-of-vocabulary, context & bias
+- [Attention Intuition](/en/docs/transformers-llm/attention-intuition) — the problem attention solves, and how models use context
+- [Attention Mechanics](/en/docs/transformers-llm/attention-mechanics) — Q, K, V, scaled dot-product & multi-head attention
+- [Attention in Practice](/en/docs/transformers-llm/attention-practice) — hand-written attention, tensor shapes, Padding Mask & Causal Mask
+- [Transformer Architecture](/en/docs/transformers-llm/transformer-architecture) — positional encoding, residual connections, LayerNorm, FFN, Decoder-only & overall data flow
+- [Pretraining](/en/docs/transformers-llm/pretraining) — next-token prediction, training corpora, data cleaning, objectives & scaling
+- [Build from Scratch](/en/docs/transformers-llm/build-from-scratch) — build & train a simplified GPT in PyTorch, wiring together tokenization, Embedding, Attention & the training loop
+- [Inference](/en/docs/transformers-llm/inference) — autoregressive generation, Temperature, Top-k/Top-p, Prefill, Decode & KV Cache
+- [Fine-tuning](/en/docs/transformers-llm/finetuning) — SFT, LoRA, QLoRA, dataset construction & training flow
+- [Alignment](/en/docs/transformers-llm/alignment) — preference alignment after instruction tuning, basics of RLHF & DPO
+- [Multimodal](/en/docs/transformers-llm/multimodal) — representation, fusion & model input for text, image & other modalities (advanced)
+
+---
+
+## Track B · Build AI Applications
+
+Goal: Turn model capabilities into reliable, measurable, maintainable application systems.
+
+### ⑥ LLM Engineering · 10 pages
+
+- [LLM API Basics](/en/docs/llm-engineering/api-basics) — model APIs, model selection, provider adaptation & a unified calling interface
+- [Prompt Engineering](/en/docs/llm-engineering/prompting) — instruction design, templates, few-shot examples & output constraints
+- [Streaming Responses](/en/docs/llm-engineering/streaming) — SSE, incremental parsing, request cancellation & streaming UI
+- [Structured Output](/en/docs/llm-engineering/structured-output) — JSON Schema, type validation, constrained output & error recovery
+- [Tool Calling](/en/docs/llm-engineering/tool-calling) — Function Calling, tool execution, parallel calls & the calling loop
+- [Context Engineering](/en/docs/llm-engineering/context-engineering) — context window, information filtering, compression, routing & context assembly
+- [Production Reliability](/en/docs/llm-engineering/reliability) — timeout, retry, rate limiting, concurrency control, fallback & error handling
+- [Prompt Injection Defense](/en/docs/llm-engineering/prompt-injection) — untrusted input, instruction isolation, tool permissions & defense in depth
+- [Cost & Latency](/en/docs/llm-engineering/cost-latency) — token cost, caching, model routing, latency & throughput
+- [LLM App Evaluation](/en/docs/llm-engineering/evaluation) — test sets, quality metrics, regression testing, human review & continuous evaluation
+
+### ⑦ RAG · 10 pages
+
+- [What is RAG](/en/docs/rag/what-is-rag) — RAG motivation, workflow, difference from fine-tuning & applicability boundaries
+- [Document Loading](/en/docs/rag/document-loading) — PDF parsing, layout & tables, OCR, cleaning & metadata
+- [Chunking](/en/docs/rag/chunking) — fixed-length, recursive, semantic chunking, overlap & tradeoffs
+- [Embedding Models](/en/docs/rag/embedding-models) — semantic vectors, model selection, dimensionality & multilingual capability
+- [Vector Stores](/en/docs/rag/vector-stores) — vector indexes, approximate nearest neighbor search & database selection
+- [Retrieval](/en/docs/rag/retrieval) — keyword/vector/hybrid retrieval, query rewriting & multi-query recall
+- [Reranking](/en/docs/rag/reranking) — Cross-Encoder, candidate ranking & reranking strategies
+- [Generation](/en/docs/rag/generation) — context assembly, citation tracing, faithfulness & refusal strategies
+- [RAG Evaluation](/en/docs/rag/rag-eval) — Recall@K, MRR, nDCG, answer quality & end-to-end evaluation
+- [Advanced RAG](/en/docs/rag/advanced-rag) — permission filtering, incremental updates, index rebuilding, hybrid retrieval & fault localization
+
+### ⑧ Agent & MCP · 8 pages
+
+- [What is an Agent](/en/docs/agent-mcp/what-is-agent) — agent definition, Workflow vs Agent, applicability boundaries
+- [The Agent Loop](/en/docs/agent-mcp/agent-loop) — reasoning & action, tool returns, retry, termination conditions & human approval
+- [Tool Use](/en/docs/agent-mcp/tool-use) — tool interfaces, permission control, input validation & prompt injection risks
+- [MCP](/en/docs/agent-mcp/mcp) — Host, Client, Server, Tools/Resources/Prompts, discovery & invocation, transport & security
+- [State Management](/en/docs/agent-mcp/state-management) — conversation state, short/long-term memory, long-task persistence & recovery
+- [Planning](/en/docs/agent-mcp/planning) — task decomposition, ReAct, Plan-Execute & the limits of planning
+- [Multi-Agent](/en/docs/agent-mcp/multi-agent) — role division, communication, collaboration cost & conflict handling
+- [Agent Evaluation](/en/docs/agent-mcp/agent-eval) — task completion rate, tool accuracy, execution traces, cost & stability
+
+---
+
+## Track C · Understand & Run Models
+
+Goal: Understand how models run under hardware constraints, and be able to do basic model service deployment, performance analysis & optimization.
+
+The principles of fine-tuning are learned in Track A's [Fine-tuning](/en/docs/transformers-llm/finetuning); hands-on practice happens in the capstone project.
+
+### ⑨ Inference & Deployment · 7 pages
+
+- [Local Models](/en/docs/inference-deployment/local-models) — model formats, Hugging Face model loading, CPU/GPU & GGUF
+- [Model Serving](/en/docs/inference-deployment/serving) — VRAM composition, Prefill/Decode, KV Cache, Batch & Continuous Batching
+- [Quantization](/en/docs/inference-deployment/quantization) — FP16/BF16, INT8/INT4, quantization error & performance tradeoffs
+- [Inference Optimization](/en/docs/inference-deployment/inference-optimization) — vLLM, PagedAttention, throughput, time-to-first-token & generation speed
+- [Deployment](/en/docs/inference-deployment/deployment) — containerization, inference APIs, capacity planning & stress testing
+- [Observability](/en/docs/inference-deployment/observability) — metrics, logs, tracing, model versioning & performance diagnostics
+- [Security](/en/docs/inference-deployment/security) — data privacy, model access control, content safety & service isolation
+
+---
+
+## Capstone Projects
+
+Three projects serve as stage validation for the three tracks. Each should include runnable code, experiment logs, test methods, problem analysis & retrospective.
+
+- [Machine Learning Prediction Project](/en/docs/projects/machine-learning-project) — data cleaning, feature engineering, baseline model, training, evaluation, error analysis & inference (Track A)
+- [RAG Document QA Project](/en/docs/projects/rag-project) — document parsing, chunking, retrieval, reranking, citation, evaluation & fault localization (Track B)
+- [Fine-tuning & Serving Project](/en/docs/projects/finetuning-serving-project) — LoRA fine-tuning, model deployment, performance testing, latency & throughput analysis (Track C)
+
+---
+
+## Learning & Acceptance Criteria
+
+This course aims for understanding principles, hands-on practice, and independent problem-solving. Content is organized around each topic's characteristics — articles are not required to mechanically follow the same structure.
+
+Core knowledge points should aim to cover the following aspects:
+
+1. **Problem background**: Define the problem being solved, its context, and its practical value.
+2. **Intuition & concepts**: Build a correct mental model through concrete examples; explain core concepts and their relationships.
+3. **Principles & mechanisms**: Explain how things work and the design tradeoffs, using necessary math formulas, data flow, or system structure.
+4. **Code & practice**: Understand the implementation through a minimal runnable example, and use mature frameworks or tools where appropriate.
+5. **Experiment & analysis**: Verify key conclusions through reproducible experiments; observe how parameter changes affect results and why.
+6. **Limitations & pitfalls**: Explain applicability conditions, common mistakes, failure modes, and easily confused concepts.
+7. **Acceptance tasks**: Verify mastery of core knowledge through tasks such as explaining, deriving, implementing, or troubleshooting.
+
+Different topics call for teaching approaches suited to their nature: math foundations emphasize concepts and derivation, model principles emphasize mechanisms and experiments, and engineering practice emphasizes implementation, testing, and troubleshooting.
+
+**Mastery standard:** Reading completion is not the marker of learning completion. The primary basis is whether you can independently explain core principles, complete key implementations, analyze typical problems, and articulate technical tradeoffs.

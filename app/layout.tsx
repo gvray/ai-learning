@@ -1,7 +1,13 @@
 import { RootProvider } from "fumadocs-ui/provider/next";
 import "./global.css";
 import { Inter } from "next/font/google";
+import type { Metadata } from "next";
 import { getLocale, i18n } from "@/lib/i18n";
+import { siteUrl } from "@/lib/shared";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl || "http://localhost:8001"),
+};
 
 const inter = Inter({
   subsets: ["latin"],

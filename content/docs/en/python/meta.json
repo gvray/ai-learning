@@ -1,0 +1,12 @@
+{
+  "title": "Python for ML",
+  "pages": [
+    "environment",
+    "syntax",
+    "numpy",
+    "pandas",
+    "visualization",
+    "jupyter",
+    "python-for-ml"
+  ]
+}

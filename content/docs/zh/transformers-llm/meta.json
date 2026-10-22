@@ -1,0 +1,17 @@
+{
+  "title": "Transformer 与 LLM",
+  "pages": [
+    "embedding-intuition",
+    "embedding-practice",
+    "embedding-boundary",
+    "tokenization",
+    "attention-intuition",
+    "attention-mechanics",
+    "attention-practice",
+    "transformer-architecture",
+    "build-from-scratch",
+    "pretraining",
+    "alignment",
+    "inference"
+  ]
+}

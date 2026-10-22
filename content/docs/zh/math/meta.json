@@ -1,0 +1,11 @@
+{
+  "title": "数学补位",
+  "pages": [
+    "linear-algebra",
+    "calculus",
+    "probability",
+    "statistics",
+    "optimization",
+    "math-for-ml"
+  ]
+}

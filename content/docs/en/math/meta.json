@@ -1,0 +1,11 @@
+{
+  "title": "Math Foundations",
+  "pages": [
+    "linear-algebra",
+    "calculus",
+    "probability",
+    "statistics",
+    "optimization",
+    "math-for-ml"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Inference & Deployment",
+  "pages": [
+    "serving",
+    "local-models",
+    "quantization",
+    "inference-optimization",
+    "deployment",
+    "observability",
+    "security",
+    "capstone"
+  ]
+}

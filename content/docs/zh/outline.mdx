@@ -1,0 +1,168 @@
+---
+title: 内容大纲
+description: AI 系统学习路线总览，涵盖基础原理、应用工程与模型部署
+---
+
+# 内容大纲
+
+9 个主题、81 篇主题文章 + 3 个综合项目。
+
+学习目标：从编程和数学基础出发，理解机器学习、深度学习与 LLM 的核心原理，具备独立构建 AI 应用、分析模型问题、部署推理服务，以及深入浅出讲解关键技术的能力。
+
+---
+
+## 主线 A · 理解 AI 如何工作
+
+目标：理解数据如何表示、模型如何学习、参数如何更新，以及大语言模型如何生成内容。
+
+### ① Python for ML · 7 篇
+
+- [Python 环境与工具链](/docs/python/environment) — Python 版本、uv、虚拟环境、包管理
+- [Python 语法速查](/docs/python/syntax) — 基础语法、函数与模块、异常与文件处理
+- [Jupyter Notebook 工作流](/docs/python/jupyter) — 交互式开发、实验记录与调试
+- [NumPy 数组与向量化计算](/docs/python/numpy) — 数组形状、广播、向量化计算
+- [Pandas 数据处理](/docs/python/pandas) — 数据读取、清洗、聚合与转换
+- [数据可视化](/docs/python/visualization) — matplotlib、分布分析与关系可视化
+- [Python for ML 实战](/docs/python/python-for-ml) — 完整的数据读取、清洗、分析与实验流程
+
+### ② Math Foundations · 6 篇
+
+- [线性代数基础](/docs/math/linear-algebra) — 向量、矩阵乘法、转置与形状变换
+- [微积分要点](/docs/math/calculus) — 导数、偏导数、链式法则与梯度
+- [概率论](/docs/math/probability) — 条件概率、期望、方差与常见分布
+- [统计学](/docs/math/statistics) — 参数估计、抽样、假设检验与相关性
+- [优化与梯度下降](/docs/math/optimization) — 优化目标、梯度下降、学习率与收敛
+- [数学在 ML 中的应用](/docs/math/math-for-ml) — 用 NumPy 验证数学概念、随机实验与可复现性
+
+### ③ Machine Learning · 10 篇
+
+- [机器学习是什么](/docs/machine-learning/what-is-ml) — 学习范式、监督学习、无监督学习与问题类型
+- [数据划分与泄漏](/docs/machine-learning/data-splitting) — 训练集、验证集、测试集、交叉验证与数据泄漏
+- [特征工程](/docs/machine-learning/feature-engineering) — 缺失值、编码、标准化与特征选择
+- [线性回归](/docs/machine-learning/linear-regression) — 最小二乘、解析解与梯度优化
+- [逻辑回归](/docs/machine-learning/logistic-regression) — Sigmoid、二分类、决策边界与概率输出
+- [损失与优化](/docs/machine-learning/loss-optimization) — MSE、交叉熵、目标函数与梯度下降
+- [树模型](/docs/machine-learning/tree-models) — 决策树、随机森林、梯度提升
+- [无监督学习](/docs/machine-learning/unsupervised) — 聚类、降维与数据结构发现
+- [过拟合与正则](/docs/machine-learning/overfitting) — 偏差与方差、L1/L2、早停
+- [模型评估与工作流](/docs/machine-learning/evaluation) — Dummy Baseline、评价指标、类别不平衡与精确率/召回率/F1、交叉验证、超参数搜索、误差分析、模型保存与推理
+
+### ④ Deep Learning · 9 篇
+
+- [单个神经元](/docs/deep-learning/neuron) — 线性组合、偏置、激活与几何直觉
+- [激活函数](/docs/deep-learning/activations) — ReLU、Sigmoid、Tanh 与梯度特性
+- [神经网络](/docs/deep-learning/neural-network) — 网络层、前向传播、权重初始化与表达能力
+- [反向传播基础](/docs/deep-learning/backpropagation-basics) — 损失、计算图、链式法则与梯度
+- [反向传播深入](/docs/deep-learning/backpropagation-deep) — 矩阵形式、梯度流与多层网络的梯度计算
+- [反向传播实战](/docs/deep-learning/backpropagation-practice) — NumPy 手写反向传播、数值梯度检验
+- [PyTorch 入门](/docs/deep-learning/pytorch) — Tensor、自动微分、计算图、Dataset 与 DataLoader
+- [优化器](/docs/deep-learning/optimizer) — SGD、Momentum、Adam、学习率调度与梯度裁剪
+- [训练循环](/docs/deep-learning/training-loop) — Batch、Epoch、验证、Checkpoint、过拟合与训练诊断
+
+### ⑤ Transformers & LLM · 14 篇
+
+- [分词](/docs/transformers-llm/tokenization) — Token、BPE、词表、编码与解码
+- [Embedding 直觉](/docs/transformers-llm/embedding-intuition) — Token Embedding、向量表示与语义空间
+- [Embedding 实践](/docs/transformers-llm/embedding-practice) — 加载嵌入向量、相似度计算与可视化
+- [Embedding 的边界](/docs/transformers-llm/embedding-boundary) — 表示局限、词表外问题、上下文与偏置
+- [Attention 直觉](/docs/transformers-llm/attention-intuition) — 注意力解决的问题，以及模型如何利用上下文
+- [Attention 机制](/docs/transformers-llm/attention-mechanics) — Q、K、V、缩放点积与多头注意力
+- [Attention 实战](/docs/transformers-llm/attention-practice) — 手写 Attention、张量形状、Padding Mask 与 Causal Mask
+- [Transformer 架构](/docs/transformers-llm/transformer-architecture) — 位置编码、残差连接、LayerNorm、FFN、Decoder-only 与整体数据流
+- [预训练](/docs/transformers-llm/pretraining) — Next Token Prediction、训练语料、数据清洗、训练目标与 Scaling
+- [从零构建小模型](/docs/transformers-llm/build-from-scratch) — 使用 PyTorch 构建并训练简化版 GPT，串联分词、Embedding、Attention 与训练循环
+- [推理](/docs/transformers-llm/inference) — 自回归生成、Temperature、Top-k/Top-p、Prefill、Decode 与 KV Cache
+- [微调](/docs/transformers-llm/finetuning) — SFT、LoRA、QLoRA、数据集构建与训练流程
+- [对齐](/docs/transformers-llm/alignment) — 指令微调后的偏好对齐、RLHF 与 DPO 的基本原理
+- [多模态](/docs/transformers-llm/multimodal) — 文本、图像等模态的表示、融合与模型输入（进阶）
+
+---
+
+## 主线 B · 构建 AI 应用
+
+目标：将模型能力转化为可靠、可评测、可维护的应用系统。
+
+### ⑥ LLM Engineering · 10 篇
+
+- [LLM API 基础](/docs/llm-engineering/api-basics) — 模型 API、模型选择、供应商适配与统一调用接口
+- [Prompt 工程](/docs/llm-engineering/prompting) — 指令设计、模板、少样本示例与输出约束
+- [流式响应](/docs/llm-engineering/streaming) — SSE、增量解析、取消请求与流式 UI
+- [结构化输出](/docs/llm-engineering/structured-output) — JSON Schema、类型校验、约束输出与错误恢复
+- [工具调用](/docs/llm-engineering/tool-calling) — Function Calling、工具执行、并行调用与调用循环
+- [上下文工程](/docs/llm-engineering/context-engineering) — 上下文窗口、信息筛选、压缩、路由与上下文组装
+- [生产可靠性](/docs/llm-engineering/reliability) — 超时、重试、限流、并发控制、降级与错误处理
+- [提示注入防护](/docs/llm-engineering/prompt-injection) — 不可信输入、指令隔离、工具权限与纵深防御
+- [成本与延迟](/docs/llm-engineering/cost-latency) — Token 成本、缓存、模型路由、延迟与吞吐量
+- [LLM 应用评测](/docs/llm-engineering/evaluation) — 测试集、质量指标、回归测试、人工评审与持续评估
+
+### ⑦ RAG · 10 篇
+
+- [RAG 是什么](/docs/rag/what-is-rag) — RAG 的动机、工作流程、与微调的区别及适用边界
+- [文档加载](/docs/rag/document-loading) — PDF 解析、版面与表格、OCR、清洗和元数据
+- [分块策略](/docs/rag/chunking) — 固定长度、递归、语义分块、重叠与权衡
+- [Embedding 模型](/docs/rag/embedding-models) — 语义向量、模型选型、维度与多语言能力
+- [向量数据库](/docs/rag/vector-stores) — 向量索引、近似最近邻检索与数据库选型
+- [检索](/docs/rag/retrieval) — 关键词检索、向量检索、混合检索、查询改写与多路召回
+- [重排](/docs/rag/reranking) — Cross-Encoder、候选排序与重排策略
+- [生成](/docs/rag/generation) — 上下文组装、引用溯源、忠实度与拒答策略
+- [RAG 评估](/docs/rag/rag-eval) — Recall@K、MRR、nDCG、答案质量与端到端评估
+- [高级 RAG](/docs/rag/advanced-rag) — 权限过滤、增量更新、索引重建、混合检索与故障定位
+
+### ⑧ Agent & MCP · 8 篇
+
+- [Agent 是什么](/docs/agent-mcp/what-is-agent) — Agent 的定义、Workflow 与 Agent 的区别、适用边界
+- [Agent 循环](/docs/agent-mcp/agent-loop) — 推理与行动、工具返回、重试、终止条件与人工审批
+- [工具使用](/docs/agent-mcp/tool-use) — 工具接口、权限控制、输入验证与提示注入风险
+- [MCP](/docs/agent-mcp/mcp) — Host、Client、Server、Tools/Resources/Prompts、发现调用、传输与安全
+- [状态管理](/docs/agent-mcp/state-management) — 对话状态、短期与长期记忆、长任务持久化与恢复
+- [规划](/docs/agent-mcp/planning) — 任务分解、ReAct、Plan-Execute 与规划的局限
+- [多 Agent](/docs/agent-mcp/multi-agent) — 角色分工、通信、协作成本与冲突处理
+- [Agent 评估](/docs/agent-mcp/agent-eval) — 任务完成率、工具正确率、执行轨迹、成本与稳定性
+
+---
+
+## 主线 C · 理解并运行模型
+
+目标：理解模型如何在硬件约束下运行，并能完成基本的模型服务部署、性能分析和优化。
+
+微调的基本原理在主线 A 的 [微调](/docs/transformers-llm/finetuning) 中学习，实际操作在综合项目中完成。
+
+### ⑨ Inference & Deployment · 7 篇
+
+- [本地模型](/docs/inference-deployment/local-models) — 模型格式、Hugging Face 模型加载、CPU/GPU 与 GGUF
+- [模型服务](/docs/inference-deployment/serving) — 显存构成、Prefill/Decode、KV Cache、Batch 与 Continuous Batching
+- [量化](/docs/inference-deployment/quantization) — FP16/BF16、INT8/INT4、量化误差与性能权衡
+- [推理优化](/docs/inference-deployment/inference-optimization) — vLLM、PagedAttention、吞吐量、首 Token 延迟与生成速度
+- [部署](/docs/inference-deployment/deployment) — 容器化、推理 API、容量规划与压力测试
+- [可观测性](/docs/inference-deployment/observability) — 指标、日志、追踪、模型版本与性能诊断
+- [安全](/docs/inference-deployment/security) — 数据隐私、模型访问控制、内容安全与服务隔离
+
+---
+
+## 综合实践项目
+
+三个项目分别作为三条主线的阶段验收。每个项目都应包含可运行代码、实验记录、测试方法、问题分析与复盘。
+
+- [机器学习预测项目](/docs/projects/machine-learning-project) — 数据清洗、特征工程、基线模型、训练、评估、误差分析与推理（主线 A）
+- [RAG 文档问答项目](/docs/projects/rag-project) — 文档解析、分块、检索、重排、引用、评估与故障排查（主线 B）
+- [微调与推理服务项目](/docs/projects/finetuning-serving-project) — LoRA 微调、模型部署、性能测试、延迟与吞吐量分析（主线 C）
+
+---
+
+## 学习与验收标准
+
+本课程以理解原理、动手实践和独立解决问题为目标。根据主题特点组织内容，不要求每篇文章机械套用相同结构。
+
+核心知识点应尽可能覆盖以下环节：
+
+1. **问题背景**：明确要解决的问题、产生背景与实际价值。
+2. **直觉与概念**：通过具体示例建立正确的心智模型，解释核心概念及其关系。
+3. **原理与机制**：结合必要的数学公式、数据流或系统结构，解释其工作原理与设计取舍。
+4. **代码与实践**：通过最小可运行示例理解实现过程，必要时进一步使用成熟框架或工具。
+5. **实验与分析**：通过可复现的实验验证关键结论，观察参数变化、结果差异及其原因。
+6. **局限与误区**：说明适用条件、常见错误、失效场景与容易混淆的概念。
+7. **学习验收**：通过解释、推导、实现或问题排查等任务，检验对核心知识的掌握程度。
+
+不同主题应采用适合自身特点的教学方式：数学基础侧重概念与推导，模型原理侧重机制与实验，工程实践侧重实现、测试与故障排查。
+
+**掌握标准：** 不以阅读完成作为学习完成的标志，而以能否独立解释核心原理、完成关键实现、分析典型问题并说明技术取舍作为主要依据。
