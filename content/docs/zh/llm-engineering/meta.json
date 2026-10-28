@@ -7,7 +7,9 @@
     "structured-output",
     "tool-calling",
     "context-engineering",
-    "evaluation",
-    "cost-latency"
+    "reliability",
+    "prompt-injection",
+    "cost-latency",
+    "evaluation"
   ]
 }

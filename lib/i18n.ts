@@ -9,12 +9,18 @@ export async function getLocale(): Promise<Locale> {
   return inferLocale(headersList.get("x-pathname") ?? "");
 }
 
-export const i18n = defineI18nUI({
-  languages: ["zh", "en"],
-  defaultLanguage: "zh",
-  hideLocale: "default-locale",
-  parser: "dir",
-});
+export const i18n = defineI18nUI(
+  {
+    languages: ["zh", "en"],
+    defaultLanguage: "en",
+    hideLocale: "default-locale",
+    parser: "dir",
+  },
+  {
+    zh: { displayName: "简体中文" },
+    en: { displayName: "English" },
+  },
+);
 
 export const i18nConfig = {
   languages: i18n.languages,

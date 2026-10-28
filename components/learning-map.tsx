@@ -15,16 +15,96 @@ type Node = {
 };
 
 const NODES: Node[] = [
-  { id: "python", num: "①", label: "Python for ML", href: "/docs/python/environment", track: "common", y: 0.04, col: 0 },
-  { id: "math", num: "②", label: "数学补位", href: "/docs/math/linear-algebra", track: "common", y: 0.14, col: 0 },
-  { id: "ml", num: "③", label: "机器学习", href: "/docs/machine-learning/what-is-ml", track: "common", y: 0.24, col: 0 },
-  { id: "dl", num: "④", label: "深度学习", href: "/docs/deep-learning/neuron", track: "common", y: 0.34, col: 0 },
-  { id: "transformers", num: "⑤", label: "Transformer 与 LLM", href: "/docs/transformers-llm/embedding-intuition", track: "common", y: 0.44, col: 0 },
-  { id: "llm-eng", num: "⑥", label: "LLM 应用开发", href: "/docs/llm-engineering/api-basics", track: "common", y: 0.56, col: 0 },
-  { id: "rag-fe", num: "⑦", label: "RAG", href: "/docs/rag/what-is-rag", track: "frontend", y: 0.72, col: -1 },
-  { id: "rag-be", num: "⑦", label: "RAG", href: "/docs/rag/what-is-rag", track: "backend", y: 0.72, col: 1 },
-  { id: "agent", num: "⑧", label: "Agent 与 MCP", href: "/docs/agent-mcp/what-is-agent", track: "backend", y: 0.84, col: 1 },
-  { id: "deploy", num: "⑨", label: "部署与推理优化", href: "/docs/inference-deployment/serving", track: "backend", y: 0.96, col: 1 },
+  {
+    id: "python",
+    num: "①",
+    label: "Python for ML",
+    href: "/docs/python/environment",
+    track: "common",
+    y: 0.04,
+    col: 0,
+  },
+  {
+    id: "math",
+    num: "②",
+    label: "数学补位",
+    href: "/docs/math/linear-algebra",
+    track: "common",
+    y: 0.14,
+    col: 0,
+  },
+  {
+    id: "ml",
+    num: "③",
+    label: "机器学习",
+    href: "/docs/machine-learning/what-is-ml",
+    track: "common",
+    y: 0.24,
+    col: 0,
+  },
+  {
+    id: "dl",
+    num: "④",
+    label: "深度学习",
+    href: "/docs/deep-learning/neuron",
+    track: "common",
+    y: 0.34,
+    col: 0,
+  },
+  {
+    id: "transformers",
+    num: "⑤",
+    label: "Transformer 与 LLM",
+    href: "/docs/transformers-llm/embedding-intuition",
+    track: "common",
+    y: 0.44,
+    col: 0,
+  },
+  {
+    id: "llm-eng",
+    num: "⑥",
+    label: "LLM 应用开发",
+    href: "/docs/llm-engineering/api-basics",
+    track: "common",
+    y: 0.56,
+    col: 0,
+  },
+  {
+    id: "rag-fe",
+    num: "⑦",
+    label: "RAG",
+    href: "/docs/rag/what-is-rag",
+    track: "frontend",
+    y: 0.72,
+    col: -1,
+  },
+  {
+    id: "rag-be",
+    num: "⑦",
+    label: "RAG",
+    href: "/docs/rag/what-is-rag",
+    track: "backend",
+    y: 0.72,
+    col: 1,
+  },
+  {
+    id: "agent",
+    num: "⑧",
+    label: "Agent 与 MCP",
+    href: "/docs/agent-mcp/what-is-agent",
+    track: "backend",
+    y: 0.84,
+    col: 1,
+  },
+  {
+    id: "deploy",
+    num: "⑨",
+    label: "部署与推理优化",
+    href: "/docs/inference-deployment/serving",
+    track: "backend",
+    y: 0.96,
+    col: 1,
+  },
 ];
 
 const COLOR: Record<Track, string> = {
@@ -52,11 +132,25 @@ export default function LearningMap() {
 
   const segments: { from: Node; to: Node; track: Track }[] = [];
   for (let i = 0; i < commonChain.length - 1; i++) {
-    segments.push({ from: commonChain[i], to: commonChain[i + 1], track: "common" });
+    segments.push({
+      from: commonChain[i],
+      to: commonChain[i + 1],
+      track: "common",
+    });
   }
   // ⑥ 分叉到 ⑦ 前端 / 后端
-  if (feNodes[0]) segments.push({ from: commonChain[commonChain.length - 1], to: feNodes[0], track: "frontend" });
-  if (beNodes[0]) segments.push({ from: commonChain[commonChain.length - 1], to: beNodes[0], track: "backend" });
+  if (feNodes[0])
+    segments.push({
+      from: commonChain[commonChain.length - 1],
+      to: feNodes[0],
+      track: "frontend",
+    });
+  if (beNodes[0])
+    segments.push({
+      from: commonChain[commonChain.length - 1],
+      to: beNodes[0],
+      track: "backend",
+    });
   for (let i = 0; i < beNodes.length - 1; i++) {
     segments.push({ from: beNodes[i], to: beNodes[i + 1], track: "backend" });
   }
@@ -64,21 +158,50 @@ export default function LearningMap() {
   return (
     <div className="not-prose my-6 overflow-x-auto">
       <div className="learning-map-viz rounded-xl border border-fd-border bg-fd-card p-2">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[560px]" role="img" aria-label="AI 学习路线图">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full min-w-[560px]"
+          role="img"
+          aria-label="AI 学习路线图"
+        >
           <defs>
-            <marker id="arrow-common" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker
+              id="arrow-common"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
               <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--map-common)" />
             </marker>
-            <marker id="arrow-frontend" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker
+              id="arrow-frontend"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
               <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--map-frontend)" />
             </marker>
-            <marker id="arrow-backend" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker
+              id="arrow-backend"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
               <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--map-backend)" />
             </marker>
           </defs>
 
           {/* 连线 */}
-          {segments.map((seg, i) => {
+          {segments.map((seg) => {
             const x1 = cx(seg.from.col);
             const y1 = cy(seg.from.y) + NODE_H / 2;
             const x2 = cx(seg.to.col);
@@ -87,7 +210,7 @@ export default function LearningMap() {
             const d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
             return (
               <path
-                key={`seg-${i}`}
+                key={`${seg.from.id}-${seg.to.id}`}
                 d={d}
                 fill="none"
                 stroke={COLOR[seg.track]}
@@ -120,11 +243,27 @@ export default function LearningMap() {
                     stroke={COLOR[n.track]}
                     strokeWidth={2}
                   />
-                  <circle cx={x + 18} cy={cy(n.y)} r={11} fill={COLOR[n.track]} />
-                  <text x={x + 18} y={cy(n.y)} textAnchor="middle" dominantBaseline="central" className="map-num">
+                  <circle
+                    cx={x + 18}
+                    cy={cy(n.y)}
+                    r={11}
+                    fill={COLOR[n.track]}
+                  />
+                  <text
+                    x={x + 18}
+                    y={cy(n.y)}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    className="map-num"
+                  >
                     {n.num}
                   </text>
-                  <text x={x + 36} y={cy(n.y)} dominantBaseline="central" className="map-label">
+                  <text
+                    x={x + 36}
+                    y={cy(n.y)}
+                    dominantBaseline="central"
+                    className="map-label"
+                  >
                     {n.label}
                   </text>
                 </g>
@@ -137,15 +276,24 @@ export default function LearningMap() {
       {/* 图例 */}
       <div className="mt-3 flex flex-wrap gap-4 px-1 text-sm">
         <span className="inline-flex items-center gap-1.5">
-          <span className="map-swatch" style={{ background: "var(--map-common)" }} />
+          <span
+            className="map-swatch"
+            style={{ background: "var(--map-common)" }}
+          />
           共同根基（前端 + 后端）
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="map-swatch" style={{ background: "var(--map-frontend)" }} />
+          <span
+            className="map-swatch"
+            style={{ background: "var(--map-frontend)" }}
+          />
           前端路径
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="map-swatch" style={{ background: "var(--map-backend)" }} />
+          <span
+            className="map-swatch"
+            style={{ background: "var(--map-backend)" }}
+          />
           后端路径
         </span>
       </div>

@@ -1,0 +1,8 @@
+{
+  "title": "Capstone Projects",
+  "pages": [
+    "machine-learning-project",
+    "rag-project",
+    "finetuning-serving-project"
+  ]
+}

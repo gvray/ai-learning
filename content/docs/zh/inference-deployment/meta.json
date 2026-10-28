@@ -1,13 +1,12 @@
 {
   "title": "部署与推理优化",
   "pages": [
-    "serving",
     "local-models",
+    "serving",
     "quantization",
     "inference-optimization",
     "deployment",
     "observability",
-    "security",
-    "capstone"
+    "security"
   ]
 }

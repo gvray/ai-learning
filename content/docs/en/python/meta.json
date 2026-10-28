@@ -3,10 +3,10 @@
   "pages": [
     "environment",
     "syntax",
+    "jupyter",
     "numpy",
     "pandas",
     "visualization",
-    "jupyter",
     "python-for-ml"
   ]
 }

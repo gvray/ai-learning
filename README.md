@@ -1,59 +1,62 @@
-# AI 学习
+<p align="center">
+  <img src="public/logo.svg" width="120" alt="AI Learning" />
+</p>
 
-基于 Next.js 16 + Fumadocs 16 + Tailwind v4 + React 19 的 AI 学习文档站。
+# AI Learning
 
-[![CI](https://github.com/gavin/ai-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/gavin/ai-learning/actions/workflows/ci.yml)
+An interactive learning site for mastering AI systematically — from principles to deployment.
+
+[![CI](https://github.com/gvray/ai-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/gvray/ai-learning/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 技术栈
+**English** | [简体中文](README.zh.md)
 
-| 技术 | 版本 | 用途 |
-| --- | --- | --- |
-| Next.js | 16 | App Router / 服务端渲染 |
-| Fumadocs | 16 | 文档框架（UI / Core / MDX） |
-| Tailwind CSS | v4 | 样式 |
-| React | 19 | UI |
-| TypeScript | 7 | 类型安全 |
-| Biome | 2 | Lint / Format |
-| Orama | — | 全文搜索（本地） |
+## Overview
 
-## 快速开始
+A learning path from mathematical foundations to model services — understand principles, build applications, run models. Bilingual (EN/ZH), with interactive demos and training components, and a capstone project for each track.
 
-```bash
-pnpm install    # 安装依赖
-pnpm dev        # 开发服务器 http://localhost:3000
-pnpm build      # 生产构建
-pnpm start      # 运行生产构建
-pnpm types:check  # 类型检查
-pnpm lint       # Biome 检查
-pnpm format     # Biome 格式化
-```
+**Live docs**: <https://gvray.github.io/ai-learning>
 
-## 目录结构
+## Three Learning Tracks
 
-| 路径 | 说明 |
-| --- | --- |
-| `content/docs/` | 文档源（`.md` / `.mdx`） |
-| `app/(home)/` | 首页与其他非文档页面 |
-| `app/docs/` | 文档布局与动态路由 |
-| `app/api/search/` | Orama 搜索接口 |
-| `app/og/` | OG 图片生成 |
-| `app/llms*.txt` | LLM 友好的文本导出 |
-| `lib/source.ts` | 内容源适配器（`loader()`） |
-| `lib/shared.ts` | 站点配置（名称 / GitHub / 路由） |
-| `lib/layout.shared.tsx` | 布局共享配置 |
-| `components/mdx.tsx` | MDX 组件映射 |
+### Track A · Understand How AI Works
 
-## 写文档
+How data is represented, how models learn, how parameters update, and how LLMs generate.
 
-直接在 `content/docs/` 下新建 `.md` 或 `.mdx` 文件即可。纯文字笔记用 `.md`，
-需要嵌入交互组件时用 `.mdx`。用 `meta.json` 控制侧边栏顺序与分组。
+- **Python for ML** — toolchain, data handling, and visualization
+- **Math Foundations** — linear algebra, calculus, probability/statistics, and optimization
+- **Machine Learning** — paradigms, feature engineering, model families, and evaluation
+- **Deep Learning** — neural networks, backpropagation, and the training process
+- **Transformers & LLM** — tokenization, attention, pretraining, fine-tuning, and alignment
 
-## 贡献
+### Track B · Build AI Applications
 
-欢迎贡献文档与代码！请阅读 [贡献指南](CONTRIBUTING.md)。
+Turn model capabilities into reliable, measurable, maintainable systems.
 
-## 许可证
+- **LLM Engineering** — API calls, prompt engineering, tool use, and production reliability
+- **RAG** — document processing, retrieval, reranking, generation, and evaluation
+- **Agents & MCP** — reasoning loops, tool use, state management, and multi-agent collaboration
+
+### Track C · Understand and Run Models
+
+How models run under hardware constraints — deploy, profile, and optimize model services.
+
+- **Inference & Deployment** — local models, serving, quantization, inference engines, and observability
+
+For the full article list, see the [outline source](content/docs/en/outline.mdx).
+
+## Capstone Projects
+
+Each track closes with a capstone project:
+
+- **Machine Learning Prediction Project** (Track A) — data cleaning, feature engineering, baseline models, evaluation, and inference
+- **RAG Q&A Project** (Track B) — document parsing, retrieval, reranking, citation, and evaluation
+- **Fine-tuning & Serving Project** (Track C) — LoRA fine-tuning, deployment, performance and throughput analysis
+
+## Contribute
+
+This is a docs-first project. To contribute documentation or code, see the [contributing guide](CONTRIBUTING.md).
+
+## License
 
 [MIT](LICENSE) © Gavin Ray
-

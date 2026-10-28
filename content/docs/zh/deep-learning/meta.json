@@ -2,12 +2,13 @@
   "title": "深度学习",
   "pages": [
     "neuron",
+    "activations",
     "neural-network",
     "backpropagation-basics",
     "backpropagation-deep",
     "backpropagation-practice",
-    "training-loop",
-    "activations",
-    "pytorch"
+    "pytorch",
+    "optimizer",
+    "training-loop"
   ]
 }

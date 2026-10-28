@@ -1,0 +1,8 @@
+{
+  "title": "综合实践项目",
+  "pages": [
+    "machine-learning-project",
+    "rag-project",
+    "finetuning-serving-project"
+  ]
+}

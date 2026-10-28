@@ -59,5 +59,9 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|api|llms\\.txt|llms-full\\.txt).*)"],
+  // 排除 Next.js 内部资源、API、LLM 文本导出与静态站点资源（logo/favicon 等），
+  // 否则 i18n 中间件会把 /logo.svg 这类无 locale 的静态路径重写成 /en/logo.svg 而返回 404。
+  matcher: [
+    "/((?!_next/static|_next/image|api|llms\\.txt|llms-full\\.txt|.*\\.(?:svg|ico|png|jpe?g|gif|webp|avif|webmanifest|xml|woff2?)).*)",
+  ],
 };

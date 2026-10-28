@@ -95,22 +95,65 @@ export default function LinearRegressionTrainer() {
           const gx = toPx(i, 0).px;
           const gy = toPx(0, i).py;
           return (
-            <g key={`g-${i}`} className="text-fd-muted-foreground/30">
-              <line x1={gx} y1={PAD} x2={gx} y2={H - PAD} stroke="currentColor" strokeWidth={0.5} />
-              <line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="currentColor" strokeWidth={0.5} />
+            <g key={`grid-${gx}-${gy}`} className="text-fd-muted-foreground/30">
+              <line
+                x1={gx}
+                y1={PAD}
+                x2={gx}
+                y2={H - PAD}
+                stroke="currentColor"
+                strokeWidth={0.5}
+              />
+              <line
+                x1={PAD}
+                y1={gy}
+                x2={W - PAD}
+                y2={gy}
+                stroke="currentColor"
+                strokeWidth={0.5}
+              />
             </g>
           );
         })}
         {/* 坐标轴 */}
-        <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} className="stroke-fd-border" strokeWidth={1.5} />
-        <line x1={PAD} y1={PAD} x2={PAD} y2={H - PAD} className="stroke-fd-border" strokeWidth={1.5} />
+        <line
+          x1={PAD}
+          y1={H - PAD}
+          x2={W - PAD}
+          y2={H - PAD}
+          className="stroke-fd-border"
+          strokeWidth={1.5}
+        />
+        <line
+          x1={PAD}
+          y1={PAD}
+          x2={PAD}
+          y2={H - PAD}
+          className="stroke-fd-border"
+          strokeWidth={1.5}
+        />
         {/* 散点 */}
-        {points.map((p, i) => {
+        {points.map((p) => {
           const { px, py } = toPx(p.x, p.y);
-          return <circle key={`p-${i}`} cx={px} cy={py} r={3.5} className="fill-blue-500" />;
+          return (
+            <circle
+              key={`p-${p.x}`}
+              cx={px}
+              cy={py}
+              r={3.5}
+              className="fill-blue-500"
+            />
+          );
         })}
         {/* 当前拟合直线 */}
-        <line x1={a.px} y1={a.py} x2={b2.px} y2={b2.py} className="stroke-rose-500" strokeWidth={2.5} />
+        <line
+          x1={a.px}
+          y1={a.py}
+          x2={b2.px}
+          y2={b2.py}
+          className="stroke-rose-500"
+          strokeWidth={2.5}
+        />
       </svg>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -171,7 +214,8 @@ export default function LinearRegressionTrainer() {
         </button>
       </div>
       <p className="mt-3 text-xs text-fd-muted-foreground">
-        真实关系 y = {TRUE_W}x + {TRUE_B}。试试把学习率拉到 0.3 以上，看直线如何震荡甚至飞走。
+        真实关系 y = {TRUE_W}x + {TRUE_B}。试试把学习率拉到 0.3
+        以上，看直线如何震荡甚至飞走。
       </p>
     </div>
   );

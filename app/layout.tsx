@@ -1,12 +1,13 @@
 import { RootProvider } from "fumadocs-ui/provider/next";
 import "./global.css";
-import { Inter } from "next/font/google";
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { getLocale, i18n } from "@/lib/i18n";
 import { siteUrl } from "@/lib/shared";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl || "http://localhost:8001"),
+  icons: { icon: "/favicon.ico" },
 };
 
 const inter = Inter({

@@ -133,7 +133,7 @@ const COPY = {
 } as const;
 
 function doc(lang: Lang, slug: string) {
-  return `${lang === "en" ? "/en" : ""}/docs/${slug}`;
+  return `${lang === "zh" ? "/zh" : ""}/docs/${slug}`;
 }
 
 export default async function HomePage(props: PageProps<"/[lang]">) {

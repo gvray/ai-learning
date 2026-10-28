@@ -2,9 +2,13 @@
   "title": "Machine Learning",
   "pages": [
     "what-is-ml",
+    "data-splitting",
+    "feature-engineering",
     "linear-regression",
     "logistic-regression",
     "loss-optimization",
+    "tree-models",
+    "unsupervised",
     "overfitting",
     "evaluation"
   ]

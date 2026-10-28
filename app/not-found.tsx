@@ -30,7 +30,7 @@ export default async function NotFound() {
       <h2 className="text-2xl font-semibold">{t.subtitle}</h2>
       <p className="max-w-md text-fd-muted-foreground">{t.description}</p>
       <Link
-        href={locale === "en" ? "/en" : "/"}
+        href={locale === "zh" ? "/zh" : "/"}
         className="inline-flex items-center rounded-md border border-fd-border px-4 py-2 text-sm font-medium hover:bg-fd-accent"
       >
         {t.cta}

@@ -3,4 +3,146 @@ title: Python Environment & Toolchain
 description: Python version, uv, virtual environments, package management
 ---
 
-# Python Environment & Toolchain
+ML dependencies are more fragile than ordinary projects: PyTorch/NumPy/CUDA versions couple together, and local Apple Silicon, an NVIDIA training rig, and a colleague's Windows box must all run the same code with reproducible experiments. Reaching for system Python + `pip install` sooner or later hits the "works on my machine" mystery. This guide solves it once with uv.
+
+## Python version
+
+The ML ecosystem always lags on new Python releases — gated by how fast libraries like PyTorch catch up.
+
+- Pick the version **your key libraries (PyTorch especially) already support stably**; don't chase the latest blindly.
+- **3.12 is the safe choice**; 3.13 support across mainstream ML libraries is largely ready, adopt as needed.
+- Avoid the unmaintained 3.8/3.9: no security updates, new libraries stop testing against them.
+
+```bash
+python --version      # check current version (python3 on some systems)
+```
+
+The `python3` shipped with macOS/Linux is the system Python. Installing packages straight into it triggers the PEP 668 "externally-managed-environment" error — the system protecting itself, not a bug. Don't touch system Python; use uv below to install an independent version.
+
+## uv: one tool to manage Python + packages
+
+[uv](https://docs.astral.sh/uv/) (by Astral, written in Rust) is this course's default tool: installs packages one to two orders of magnitude faster than pip; manages Python version, virtual environments, dependencies, and lockfile together; `uv pip` stays pip-compatible; `uv.lock` guarantees reproducibility. If you know conda you may keep using it, but course examples are unified on uv.
+
+```bash
+# Install
+curl -LsSf https://astral.sh/uv/install.sh | sh          # macOS/Linux (cross-platform, always latest)
+# Windows PowerShell: irm https://astral.sh/uv/install.ps1 | iex
+uv --version
+
+# macOS users may prefer Homebrew: easy upgrades, follows brew update automatically
+# brew install uv
+
+# Manage interpreters (no dependence on system Python; auto-downloads on demand)
+uv python install 3.12      # install Python 3.12
+uv python list              # list available/installed versions
+```
+
+## Virtual environments: one isolated space per project
+
+A virtual environment lets project A use NumPy 1.x and project B use 2.x without polluting each other, installs nothing into the system, and keeps the dependency manifest clean for reproducibility.
+
+```bash
+uv venv                  # create .venv in current dir (default current Python)
+uv venv --python 3.12    # create with a specific version
+
+source .venv/bin/activate        # activate (macOS/Linux)
+# .venv\Scripts\Activate.ps1     # Windows PowerShell
+deactivate                        # exit
+```
+
+Once activated, the prompt shows `(.venv)` and `python`/`pip` point inside the environment. To troubleshoot, run `which python` (macOS/Linux) and confirm it points at the project `.venv`, not a system path. uv's `uv run`/`uv sync` use the project `.venv` automatically, so manual activation is unnecessary.
+
+## Package management: pyproject.toml and the lockfile
+
+Modern project dependencies are declared in `pyproject.toml` (the standard entry for project metadata, of which dependencies are one part), not the traditional `requirements.txt`. Four files, each with its job:
+
+| File | Responsibility | Version-controlled? |
+| --- | --- | --- |
+| `pyproject.toml` | Declares which dependencies and allowed version ranges | ✅ |
+| `uv.lock` | Locks the resolved result: exact versions + hashes of direct and transitive deps | ✅ |
+| `.python-version` | Project's default Python version | ✅ |
+| `.venv/` | The actually installed environment on this machine | ❌ |
+
+```bash
+uv init ai-lab && cd ai-lab
+uv python pin 3.12        # write .python-version
+uv add numpy              # write into pyproject.toml and lock
+uv add "pandas>=2.2"      # version constraint
+uv add --dev pytest       # dev dependency (not in production)
+uv sync                   # install deps from uv.lock into .venv
+uv run python train.py    # run inside project env (auto-syncs)
+```
+
+`uv add` does two things: writes the dependency into `pyproject.toml` and updates `uv.lock`. `uv.lock` is the key to reproducibility — on another machine, `uv sync` gives you the exact same environment.
+
+Strict consistency checks (for CI / acceptance):
+
+```bash
+uv lock --check                   # only check whether lockfile matches config
+uv sync --locked                   # fail if out of sync, don't auto-fix the lockfile
+uv run --locked python train.py    # same check before running
+```
+
+`--locked` errors instead of auto-updating when config and lockfile diverge — suited to CI and environment acceptance. Trying a package temporarily without adding it to project deps: `uv run --with requests python -c "import requests"`. Export a traditional manifest: `uv export --format requirements-txt > requirements.txt`.
+
+<Callout type="info">
+Run scripts with `uv run` rather than `activate` then `python`: it auto-ensures the environment is synced, saving you from "forgot to sync".
+</Callout>
+
+## Full flow: from zero to running
+
+```bash
+uv init ai-lab && cd ai-lab
+uv python pin 3.12              # write .python-version
+uv add numpy pandas matplotlib
+# main.py: import numpy as np; print(np.array([1,2,3]).mean())
+uv run python main.py           # prints 2.0
+```
+
+Project layout:
+
+```
+ai-lab/
+├── .python-version    # interpreter version
+├── .venv/             # virtual environment (not version-controlled)
+├── pyproject.toml     # declared dependencies
+├── uv.lock            # precisely locked dependencies (version-controlled)
+└── main.py
+```
+
+Add `.venv/` to `.gitignore`; commit `pyproject.toml` + `uv.lock` + `.python-version` to Git. After someone clones, `uv sync` gives a consistent environment — reproducibility, landed.
+
+## Reproducing on another machine: the lockfile governs deps, not hardware
+
+When someone clones your project, they don't need to copy `.venv`:
+
+```bash
+cd ai-lab
+uv sync --locked        # fails if lockfile diverges from config
+uv run --locked python main.py
+```
+
+But **the lockfile only guarantees consistent dependency resolution, not consistent cross-platform execution**. macOS Apple Silicon, Linux x86_64, and Windows install different binary packages; PyTorch/CUDA also depend on whether GPU driver, CUDA runtime, and cuDNN versions match. For pure-Python projects the lockfile is basically enough; anything involving GPU training/inference must additionally record and verify hardware and runtime — that's left to the deep learning and inference-deployment chapters.
+
+## Common pitfalls
+
+- **Installing into system Python directly** → PEP 668 error or system pollution. Always install inside a virtual environment.
+- **Committing only requirements.txt, not the lockfile** → transitive dependency versions drift. Commit `uv.lock`.
+- **`ModuleNotFoundError` despite installing** → installed into a different environment / not activated. Use `uv run` or check `which python`.
+- **Treating `uv add` like `pip install`** → `uv add` modifies pyproject.toml + lockfile (persists); for one-off installs use `uv pip install` (doesn't write config).
+- **Cramming multiple PyTorch versions into one environment** → open separate environments per experiment.
+- **Assuming the lockfile guarantees identical results on every platform** → the lockfile governs dependency resolution, not OS/CPU/GPU/driver. Verify GPU runtimes separately.
+
+## Acceptance checklist
+
+- [ ] Create a new project with Python pinned to 3.12.
+- [ ] `uv add numpy`, write a script computing an array mean and run it with `uv run`.
+- [ ] Explain what `pyproject.toml` / `uv.lock` / `.python-version` / `.venv/` each govern.
+- [ ] Delete `.venv/`, rebuild with `uv sync --locked`, and run successfully.
+- [ ] Explain why `uv add` (not `uv pip install`) for real dependencies.
+
+## Summary
+
+- Pick an ecosystem-compatible stable version (3.12 safe); let uv manage Python version + environment + deps + lockfile, all of it.
+- The reproducibility trio: `pyproject.toml` + `uv.lock` + `.python-version`, committed to Git.
+- The lockfile governs dependency resolution; cross-platform/GPU consistency must be verified separately.
