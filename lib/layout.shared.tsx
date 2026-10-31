@@ -10,12 +10,7 @@ function NavTitle() {
   return (
     <span className="inline-flex items-center gap-2">
       {/* logo.svg: 深蓝主色适配浅色背景；logo-dark.svg: 白色主色适配深色背景 */}
-      <img
-        src="/logo.svg"
-        alt=""
-        aria-hidden
-        className="h-6 w-6 dark:hidden"
-      />
+      <img src="/logo.svg" alt="" aria-hidden className="h-6 w-6 dark:hidden" />
       <img
         src="/logo-dark.svg"
         alt=""
@@ -27,7 +22,7 @@ function NavTitle() {
   );
 }
 
-export function baseOptions(lang: string): BaseLayoutProps {
+export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: <NavTitle />,

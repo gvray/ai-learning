@@ -7,7 +7,7 @@ export default async function Layout(props: LayoutProps<"/[lang]/docs">) {
   return (
     <DocsLayout
       tree={source.getPageTree(params.lang)}
-      {...baseOptions(params.lang)}
+      {...baseOptions()}
       // 外层 HomeLayout 顶部已显示品牌,侧边栏不再重复
       nav={{ title: null }}
     >
