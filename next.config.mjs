@@ -4,7 +4,12 @@ const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const config = {
+  output: "export",
+  basePath: "/ai-learning",
+  trailingSlash: true,
+
   reactStrictMode: true,
+
   turbopack: {
     // Turbopack CSS parser 误报 ::highlight(fd-search)（标准伪元素、上游 bug）；error-recovery 后规则未丢失、功能正常，修复后移除。
     ignoreIssue: [
