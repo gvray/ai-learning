@@ -3,4 +3,167 @@ title: Jupyter Notebook 工作流
 description: 交互式开发、实验记录与调试
 ---
 
-# Jupyter Notebook 工作流
+Jupyter 是一个**交互式 notebook 环境**：在浏览器里把代码、输出、图表、Markdown 叙述组织进一个个"格子"（cell），逐块执行、即时看到结果。它不是一门语言，也不是编辑器——你写的还是 Python，跑的还是你 `uv add` 装的那些库，只是 REPL 式的即时反馈让"试错"成本降到最低。
+
+Jupyter 是 ML 探索阶段的主力：敲一段代码立刻看到结果，代码、图表、叙述同屏，改参数重跑一个 cell 就行。但 notebook 的自由是双刃剑——cell 可以任意顺序执行，状态跟着乱跑，"我这里能跑"的玄学在这里最严重。本篇讲怎么用对，让 notebook 真正服务于实验而不是埋雷。
+
+## 为什么 ML 用 Jupyter
+
+数据探索、试模型、调参数，需要**即时反馈**：看一眼分布、跑一轮训练、画一张图，立刻判断下一步。脚本要反复 `python x.py` + `print` + 改代码，notebook 把"试"的摩擦降到最低。
+
+代码 + 图表 + Markdown 叙述同处一份文档，天然就是**实验记录**：假设、过程、结论、证据图都在一起。探索阶段几乎没人用脚本。
+
+代价：notebook 难 diff、难版本控制、执行顺序乱就难复现。下面的纪律就是绕开这些坑。
+
+## 安装与启动：用 uv
+
+Jupyter 沿用 environment 篇的 uv 工作流，装进项目环境即可：
+
+```bash
+uv add jupyterlab numpy matplotlib     # JupyterLab + 后续要用的库
+uv run jupyter lab                    # 启动，浏览器自动打开
+```
+
+启动后浏览器打开 Lab 界面，左侧文件树进到项目目录，点 `New → Notebook → Python 3` 建一个 `.ipynb` 文件。
+
+你可能会看到 **JupyterLab** 和 **Jupyter Notebook** 两个名字：JupyterLab 是新一代界面（多标签、文件浏览器、终端一体），Notebook 是老的经典单文档界面。`jupyter lab` 启动的是 Lab；两者打开的 `.ipynb` 文件完全通用。本课程统一用 Lab。
+
+## Cell 与内核：执行模型
+
+notebook 由 **cell** 组成，两种类型：
+
+- **Code cell**：可执行代码，下面跟输出（含图表）
+- **Markdown cell**：叙述、公式、结论
+
+执行代码的不是 notebook 本身，而是**内核（kernel）**——一个长期驻留的 Python 进程。跑一个 cell = 把代码发给内核；内核的状态（变量、导入、函数定义）跨 cell 持续存在。
+
+```text
+In [1]: import numpy as np
+In [2]: a = np.array([1,2,3])     # a 活在内核里
+In [3]: a.mean()                  # 上一格定义的 a 直接可用
+```
+
+关键操作：
+
+- `Shift+Enter`：跑当前 cell，跳到下一个
+- `Kernel → Restart & Run All`：**重启内核从头跑一遍**——验证 notebook 是否真能自上而下复现
+- `Kernel → Interrupt`：卡住时中断（死循环/长训练）
+
+`In [1]` / `In [2]` 是执行序号，反映**真实执行顺序**而非书写顺序。看到 `In [5]` 在 `In [3]` 上面，就说明你跳着跑了——隐患已埋下。
+
+代码的返回值或 `print` 输出直接显示在 cell 下方，图表也内嵌进来——这就是 notebook 区别于脚本的"即时看见"：
+
+```python
+import matplotlib.pyplot as plt
+x = [1, 2, 3, 4]
+plt.plot(x, [v*v for v in x])    # 一条 y=x² 的曲线直接画在 cell 下面
+```
+
+最后一行的返回值也会自动显示（不必 `print`），这在大纲里后续的 NumPy/Pandas 探索里尤其方便——敲个变量名就看到数组或表格。
+
+## 执行顺序与隐藏状态：最大的坑
+
+notebook 最经典的翻车：代码明明写在上面、看着没问题，重启却跑不通。根因是 cell **可以任意顺序执行**——你可能在下面改了变量、再回头跑上面的 cell，于是上面那段代码依赖了"后来才手动跑过"的状态。重启后这些隐式状态全没了，自然炸。
+
+纪律：
+
+- **自上而下执行**，不反向跳；要改上面，改完从那格往下重跑，或直接 Restart & Run All
+- **改完代码务必 Restart & Run All 验证一遍**，确认 notebook 自洽
+- **关键 cell 不依赖"之前手动跑过"的隐式状态**——一个 cell 该自己 import 该自己定义变量
+
+<Callout type="info">
+这条纪律直接对应 environment 篇讲的可复现主线：notebook 的执行顺序自由，正是可复现的对立面。Restart & Run All 是把"我手动试出来的状态"压回到"代码自上而下能重建的状态"的唯一手段。交付实验或交接给同事前，必跑一遍。
+</Callout>
+
+## 改外部代码不重启：autoreload
+
+ML 常见场景：在 notebook 里探索，模型代码写在 `model.py`，边改 `model.py` 边在 notebook 里试。但 Python 默认 `import` 只读一次——改了 `model.py`，notebook 里还是旧的，逼你重启内核（之前跑出来的状态全丢）。
+
+解法是 `autoreload` 魔法，放 notebook 最开头：
+
+```python
+%load_ext autoreload
+%autoreload 2
+import model            # 之后改 model.py，cell 执行时自动重载
+```
+
+`%autoreload 2` 对所有模块生效；改完 `.py` 存盘，下一个 cell 就用上新代码，内核状态保留。调试模型结构时省掉无数次重启。
+
+## 魔法命令：ML 常用的几个
+
+`%` 开头是**行魔法**（作用一行），`%%` 开头是**cell 魔法**（作用整个 cell）：
+
+```python
+%timeit np.dot(a, b)          # 多次跑取最快，测向量化/算子性能
+%%time                        # 测整个 cell 一次（测一轮训练耗时）
+%matplotlib inline            # 图表直接嵌在 cell 输出里
+%time train_one_epoch()       # 测一次（比 timeit 更适合耗时长的训练）
+%debug                        # 异常发生后进入 post-mortem，查现场变量（见下）
+```
+
+`%timeit` 适合微基准（毫秒级算子）；测一轮训练（秒到分钟级）用 `%%time` 或 `%time`，`%timeit` 会重复跑多次，长任务跑不起。
+
+## 实验记录：notebook 当实验日志
+
+一份 notebook 就是一份实验记录：Markdown cell 写假设与结论，Code cell 跑实验，图表和输出留作证据。建议结构：顶部 Markdown 写**实验目的 + 结论**，下面是过程。
+
+但 notebook 难 diff、输出文件大、混进 git 噪音巨大。版本控制纪律：
+
+- **提交前清输出**：`jupyter nbconvert --clear-output --inplace notebook.ipynb`，或配置 nbstripout 自动清
+- **要 diff 友好**：用 [jupytext](https://jupytext.readthedocs.io/) 把 notebook 同步存成 `.py`（带 cell 标记），既能版本控制又能反向同步回 `.ipynb`
+- **重要结论抽到顶部 Markdown**，别让读者翻几十个 cell 找结论
+
+## 调试：%debug 与 post-mortem
+
+notebook 报错后，立刻在新 cell 跑 `%debug`，进入 **post-mortem**：停在当时异常的栈帧，所有局部变量都在，可以查 `a.shape`、`type(x)` 定位问题。
+
+```python
+# 某个 cell 抛了异常
+%debug                # 进现场，用 p a.shape / p x 查变量；q 退出
+```
+
+或在代码里手动埋：
+
+```python
+try:
+    result = risky_call()
+except Exception:
+    import pdb; pdb.pm()    # post-mortem，停在异常帧
+```
+
+比 `print` 大法高效得多——尤其训练里张量形状不对，直接进现场查 `shape` 和 `dtype`。
+
+## 从 notebook 到脚本：探索成熟后转工程
+
+notebook 适合探索，不适合做生产/被复用/被测试。探索成熟后把代码沉淀成 `.py` 模块，notebook 留作记录或 demo。
+
+```bash
+jupyter nbconvert --to script notebook.ipynb     # 导出 .py
+jupyter nbconvert --to html notebook.ipynb        # 导出分享用 HTML
+```
+
+`jupytext --sync` 能让 `.ipynb` 与 `.py` 双向同步，探索和工程一份代码两份呈现。ML 工程化的典型路径：notebook 探索 → 抽成 `train.py` / `model.py` → 脚本跑实验 + notebook 留分析。
+
+## 常见误区
+
+- **乱序执行制造隐藏状态** → "我这里能跑"的元凶。改完 Restart & Run All 验证。
+- **把 notebook 当生产代码** → 难测试、难复现、难 diff。探索成熟转 `.py`。
+- **import 改了不生效反复重启** → 没用 autoreload，内核状态白白丢失。
+- **带输出提交 git** → diff 全是输出噪音，仓库膨胀。清输出或用 nbstripout。
+- **长任务用 `%timeit`** → 会重复跑多次，训练任务跑不起。用 `%%time`。
+- **`%debug` 不知道用** → 异常后还在满屏 `print` 排查。直接 post-mortem 查现场。
+
+## 实践验收
+
+- [ ] 在 notebook 里故意乱序执行制造隐藏状态，Restart & Run All 复现"跑不通"问题。
+- [ ] 配置 `%autoreload 2`，改外部 `.py` 后不重启内核即生效。
+- [ ] 用 `%%time` 对比两个写法（如循环 vs 向量化）的耗时。
+- [ ] 触发一个异常，用 `%debug` 进现场查变量定位问题。
+- [ ] 用 `jupyter nbconvert` 把 notebook 转成 `.py` 并跑通。
+- [ ] 说清 notebook 何时该转成脚本，以及为什么 notebook 不适合当生产代码。
+
+## 小结
+
+- notebook 是探索工具不是生产代码；执行顺序自由是最大坑，靠 Restart & Run All 压回可复现。
+- `autoreload` 让边改边试不重启内核；`%debug` 让异常排查直击现场。
+- 提交前清输出（或 jupytext 存 `.py`）；探索成熟转脚本，notebook 留作实验记录。

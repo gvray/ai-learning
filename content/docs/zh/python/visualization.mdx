@@ -3,4 +3,146 @@ title: 数据可视化
 description: matplotlib、分布分析与关系可视化
 ---
 
-# 数据可视化
+ML 不是算完就完——你要**看见**数据才能判断下一步。模型损失曲线是不是平了、预测值分布有没有偏、特征之间什么关系、训练集和测试集分布是否一致，这些靠 print 数字看不出来，一张图瞬间暴露。本篇讲 matplotlib 基本盘和 ML 最常用的几类图：分布、关系、变化。可视化在 jupyter 里直接内嵌，结合前两篇的 Pandas/NumPy 用。
+
+## 为什么 ML 离不开可视化
+
+数字告诉你"准确率 0.92"，图告诉你"在 0.3 那一刀才合理"。机器学习尤其需要图，因为数据和错误都长在分布里：
+
+- **看数据分布** → 特征偏态、长尾、离群点，决定要不要 log、要不要 clip
+- **看关系** → 特征和目标的相关性，决定哪些特征有用
+- **看训练过程** → loss 曲线、是否过拟合（训练 loss 还降、验证 loss 上升）
+- **看错误** → 残差分布、预测在哪类样本上崩了
+
+不看图直接调参，等于蒙眼调旋钮。
+
+## matplotlib 基本盘：Figure 与 Axes
+
+matplotlib 的对象模型就两层：**Figure** 是整张画布，**Axes** 是一张子图（坐标轴系）。一张 Figure 可含多个 Axes。
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+fig, ax = plt.subplots()            # 一张画布 + 一张子图
+ax.plot([1, 2, 3], [1, 4, 9])
+ax.set_xlabel("x"); ax.set_ylabel("y"); ax.set_title("y=x²")
+plt.show()                           # Jupyter 里 cell 末尾可省略，自动显示
+```
+
+`plt.subplots()` 是推荐入口——显式拿到 `ax` 对象，所有设置走 `ax.set_xxx`，比 `plt.xlabel` 这种全局接口可控。多子图：
+
+```python
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))   # 1 行 2 列
+axes[0].hist(data1); axes[0].set_title("train")
+axes[1].hist(data2); axes[1].set_title("test")
+```
+
+Jupyter 里 cell 末尾不用 `plt.show()`，图自动内嵌（前提是装了 matplotlib、Jupyter 默认行为）。但脚本里必须 `plt.show()`，否则图不弹出。
+
+## 看分布：直方图与箱线图
+
+分布是 ML 数据理解的第一步——特征是不是正态、有没有长尾、离群点在哪。
+
+```python
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+# 直方图：看整体形状
+axes[0].hist(df["price"], bins=50)
+axes[0].set_title("price 分布")
+
+# 箱线图：看离群点和分位数
+axes[1].boxplot(df["price"])
+axes[1].set_title("price 箱线图")
+```
+
+直方图看形状（正态、偏态、长尾、双峰），箱线图一眼看到中位数、四分位、离群点。看到长尾分布，下一步常是 `np.log1p` 取对数压尾——不画图你根本不知道该不该取。
+
+分箱看子群分布：
+
+```python
+for label, sub in df.groupby("city")["price"]:
+    plt.hist(sub, bins=30, alpha=0.5, label=label)
+plt.legend()
+```
+
+## 看关系：散点图与相关性
+
+特征和目标的关系、特征之间的关系，散点图最直接。
+
+```python
+plt.scatter(df["area"], df["price"], alpha=0.3)   # 面积 vs 价格
+plt.xlabel("area"); plt.ylabel("price")
+```
+
+`alpha` 设透明度——点重叠时变深，单看密度，没 alpha 的密集散点图就是一团黑。ML 里点很多，alpha 必加。
+
+多变量关系用相关性矩阵热图：
+
+```python
+corr = df[["area", "rooms", "age", "price"]].corr()   # 相关系数矩阵
+plt.imshow(corr, cmap="coolwarm", vmin=-1, vmax=1)
+plt.colorbar()
+plt.xticks(range(len(corr)), corr.columns, rotation=45)
+plt.yticks(range(len(corr)), corr.columns)
+```
+
+相关性高的特征往往冗余（可以删一个），特征和目标的相关性高往往是有用信号。相关性 ≠ 因果，但 ML 用它做特征筛选的初筛。
+
+## 看变化：折线图与训练曲线
+
+训练 loss 随 epoch 变化、预测随时间变化——折线图。
+
+```python
+epochs = range(1, 21)
+plt.plot(epochs, train_loss, label="train")
+plt.plot(epochs, val_loss, label="val")
+plt.xlabel("epoch"); plt.ylabel("loss"); plt.legend()
+```
+
+训练曲线最该看的：**train 和 val 一起画**。train 一直降、val 开始升 = 过拟合；两条都不降 = 没学动。这是判断模型状态最直接的图，深度学习章节会反复用。
+
+多条曲线加 `label` + `plt.legend()`。x 轴不传时默认 0,1,2...，传 `range(1, n+1)` 让 epoch 从 1 起。
+
+## 常用调参：让图能读
+
+默认图常难读，几个固定调整：
+
+```python
+plt.figure(figsize=(8, 5))            # 画布大小，宽高英寸
+plt.hist(x, bins=50)                   # bins 调分箱数，太细噪点、太粗丢信息
+plt.scatter(x, y, alpha=0.3, s=10)     # s 点大小
+plt.title("..."); plt.xlabel("..."); plt.ylabel("...")
+plt.legend()
+plt.tight_layout()                     # 多子图防标签重叠
+```
+
+颜色用语义：`cmap="coolwarm"`（蓝-白-红，相关性）、`cmap="viridis"`（顺序型，感知均匀）。别用彩虹色 `jet`——感知不均匀、色盲不友好，老 matplotlib 默认的它已被社区弃用。
+
+## 常见误区
+
+- **不看图就调参** → 蒙眼调旋钮。ML 必先看数据分布和训练曲线。
+- **密集散点图不加 alpha** → 一团黑，看不出密度。`alpha=0.3`。
+- **直方图 bins 不调** → 默认 bins 常不合适，太细噪点太粗丢形。
+- **训练曲线只画 train** → 看不到过拟合。train/val 必同图。
+- **用 `plt.xxx` 全局接口混 `ax.xxx`** → 复杂图状态混乱。统一用 `fig, ax = plt.subplots()` + `ax.set_xxx`。
+- **脚本里忘 `plt.show()`** → 图不显示（Jupyter 自动、脚本必须）。
+- **用彩虹色 `jet`** → 感知不均匀、色盲不友好。用 `viridis`/`coolwarm`。
+- **多子图标签重叠** → 忘 `plt.tight_layout()`。
+
+## 实践验收
+
+- [ ] 读一个 CSV，对数值列画直方图和箱线图，指出长尾/离群点，决定是否取 log。
+- [ ] 画散点图看两个特征关系，加 `alpha` 看密度。
+- [ ] 计算相关性矩阵并用热图展示，找出与目标最相关的特征。
+- [ ] 模拟 train_loss/val_loss 两条曲线，画出并能指出过拟合拐点。
+- [ ] 用 `plt.subplots(1,2)` 画训练集和测试集同一特征的分布对比图。
+- [ ] 解释为何不用 `jet` 而用 `viridis`，并说出色盲友好性。
+
+## 小结
+
+- 可视化是 ML 的眼睛：看分布、看关系、看训练曲线、看错误，不看图等于蒙眼。
+- matplotlib 两层对象：Figure 画布 + Axes 子图，推荐 `fig, ax = plt.subplots()` 显式接口。
+- 分布用直方图/箱线图，关系用散点图/相关性热图，变化用折线图；训练曲线 train/val 必同图。
+- 密集散点加 alpha，分箱要调，颜色避开 jet；脚本里必 `plt.show()`，Jupyter 自动内嵌。

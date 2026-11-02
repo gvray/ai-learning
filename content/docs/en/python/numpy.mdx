@@ -3,4 +3,161 @@ title: NumPy Arrays & Vectorized Computing
 description: array shapes, broadcasting, vectorized computation
 ---
 
-# NumPy Arrays & Vectorized Computing
+The syntax guide planted a hook: `[1,2,3] * 2` yields `[1,2,3,1,2,3]`, but `np.array([1,2,3]) * 2` yields `[2,4,6]`. That elementwise behavior, plus a contiguous-memory layout, is NumPy's entire value. Tensor ops in ML run millions of multiplies — a Python loop for that is far too slow; NumPy pushes those loops into compiled C. This guide covers shape, broadcasting, and vectorization — three concepts that run through every later ML library (PyTorch's Tensor is essentially a GPU NumPy).
+
+## Why NumPy: vectorization + contiguous memory
+
+A Python `list` stores object pointers, each element independently addressed and typed. Computing `[a[i]+b[i] for i in range(n)]` pays n times Python's interpreter overhead. An `ndarray` lays same-typed data out **contiguously** and runs ops through compiled C/Fortran loops:
+
+```python
+import numpy as np
+a = np.arange(1_000_000); b = np.arange(1_000_000)
+c = a + b          # one C-level loop; tens of times faster than [x+y for x,y in zip(a,b)]
+```
+
+That's **vectorization**: no `for` — you describe "what to do to each element" as a whole expression and let NumPy batch-execute it at the bottom. PyTorch and Pandas both inherit this model — in ML code, `a + b` / `a * b` is elementwise by default.
+
+## Creating arrays & dtype
+
+```python
+np.array([1, 2, 3])              # from a list
+np.zeros((3, 4))                 # all zeros, shape (3,4)
+np.ones((2, 3))
+np.arange(0, 10, 2)              # [0,2,4,6,8], half-open interval
+np.linspace(0, 1, 5)             # [0, 0.25, 0.5, 0.75, 1.0], evenly spaced, both ends included
+np.random.randn(3, 3)            # standard normal
+```
+
+Every ndarray has a **dtype** — the element type. NumPy's compact memory relies on it: one block laid out by a single type, with no per-element type tags.
+
+```python
+a = np.array([1, 2, 3])          # dtype int64 (64-bit int, 8 bytes/element)
+a.dtype                          # dtype('int64')
+a.astype(np.float32)             # cast to float32 (deep learning default, saves memory)
+a.astype(np.int8)                # int8, but 127+1 wraps around to -128
+```
+
+dtype is a key memory/GPU knob in ML: `float32` halves space and doubles speed vs `float64`; training almost always uses `float32`/`bfloat16`. But NumPy defaults to `float64` — crossing from NumPy into PyTorch you often need an `.astype(np.float32)` first, or GPU memory doubles.
+
+## shape & reshape
+
+`shape` is the tuple of per-axis lengths; half of reading ML code is checking whether shapes line up.
+
+```python
+a = np.arange(12)
+a.shape                          # (12,)
+a.ndim                           # 1 (number of axes)
+a.size                          # 12 (total elements)
+
+b = a.reshape(3, 4)              # to (3,4), no copy — returns a view
+b.shape                          # (3, 4)
+a.reshape(2, -1)                 # -1 means "infer this one": 12/2=6 → (2, 6)
+```
+
+`reshape` changes the shape view — no underlying-data change, no copy (when memory is contiguous). `-1` lets NumPy compute that axis; `reshape(-1)` flattens any tensor to 1-D and is common in ML.
+
+Mismatched shapes are the most common ML bug:
+
+```python
+x = np.random.randn(100, 32)     # 100 samples, 32 dims each
+W = np.random.randn(16, 32)      # want to project to 16 dims
+x @ W.T                          # (100,32) @ (32,16) → (100,16); matmul uses @
+x @ W                            # error: (100,32)@(16,32) dims don't match
+```
+
+Build the habit: before writing a matmul, walk through `(a,b) @ (b,c) → (a,c)` mentally. NumPy errors on a mismatch; PyTorch does too — this mental model applies everywhere once learned.
+
+## Indexing & slicing: view vs copy
+
+The syntax guide mentioned NumPy slicing is a view. Here's the full picture: three indexing kinds, and **whether you get a view or a copy decides whether your mutation pollutes the original** — an invisible landmine in data processing.
+
+```python
+a = np.arange(12).reshape(3, 4)
+
+# 1. Basic slicing → view (mutating affects the original)
+row = a[1, :]                    # row 1, a view
+row[0] = 99                      # a[1,0] is now 99 too!
+
+# 2. Boolean indexing → copy
+mask = a > 5
+b = a[mask]                      # all elements > 5, a copy; mutating b doesn't touch a
+
+# 3. Advanced indexing (integer list/array) → copy
+c = a[[0, 2]]                    # rows 0 and 2, a copy
+```
+
+To safely mutate a slice without polluting the original, copy explicitly: `copy = a[1, :].copy()`. `.copy()` is cheaper than tracking down "how did my data change."
+
+Broadcasting is NumPy's most powerful feature — and the easiest place to fail silently.
+
+## Broadcasting: how different shapes compute together
+
+Broadcasting lets arrays of different shapes compute together: the smaller one is "replicated" along the missing axes to align, then the op runs. Only two rules:
+
+1. Align shapes axis by axis from the right; pad the smaller with leading 1s
+2. Where one is 1 and the other is N, treat the 1 as N
+
+```python
+a = np.array([[1, 2, 3],           # shape (2, 3)
+              [4, 5, 6]])
+mean = np.array([2.0, 3.5, 5.0])   # shape (3,) → aligns to (1,3) → expands to (2,3)
+a - mean                           # each row minus mean, shape (2,3)
+```
+
+Subtracting the mean, batch normalization, multiplying every sample by a weight — ML is full of "one vector applied to a whole batch" patterns, all via broadcasting. Without it you'd write loops or `np.tile` by hand.
+
+But broadcasting **expands silently** — shapes that should have matched may compute an unexpected shape via broadcast, with no error:
+
+```python
+a = np.random.randn(100, 32)
+b = np.random.randn(100)          # want to add a per-sample bias; should be (100,1)
+a + b                             # broadcast (100,32)+(100,1)? No!
+# Actual: (100,32) aligns with (32,) → b treated as "add one value per column"
+# shape stays (100,32), no error
+# Fix: b.reshape(100, 1) or b[:, None]
+```
+
+A `b` of shape `(100,)` doesn't broadcast as the "column vector" you wanted — add an axis explicitly with `b[:, None]` or `b.reshape(-1,1)`. Broadcasting mistakes usually don't error in NumPy — build the habit of checking `result.shape` after a computation.
+
+## Vectorization & axis aggregation
+
+Vectorization is "don't write for." axis is "which dimension collapses" when aggregating:
+
+```python
+a = np.random.randn(100, 32)      # 100 samples × 32 dims
+
+a.mean()                          # scalar: mean over all elements
+a.mean(axis=0)                    # shape (32,): collapse axis=0 (samples), per-dim mean
+a.mean(axis=1)                    # shape (100,): collapse axis=1 (features), per-sample mean
+a.sum(axis=0, keepdims=True)      # shape (1,32): collapse but keep the axis, for further broadcasting
+```
+
+`axis` is "fold along this dimension" — `axis=0` folds away axis 0. `keepdims=True` keeps that axis as length 1 so the result still broadcasts against the original; normalization uses this: `(a - a.mean(axis=0, keepdims=True)) / a.std(axis=0, keepdims=True)`.
+
+## Common pitfalls
+
+- **`reshape` doesn't copy** → you get a view; mutating it changes the original. For an independent array use `.copy()`.
+- **Basic slicing is a view; advanced/boolean indexing is a copy** → mutating a slice pollutes the original. If unsure, `.copy()`.
+- **Broadcasting expands silently** → shapes that should match may produce an unexpected result with no error. Check `result.shape` after computing.
+- **`(100,)` as a column vector** → doesn't broadcast as `(100,1)`; use `b[:, None]` or `b.reshape(-1,1)`.
+- **Default `float64`** → before crossing into PyTorch, `.astype(np.float32)` or GPU memory doubles.
+- **`int8` wraps on overflow** → `np.array([127], dtype=np.int8) + 1` yields `-128`, no error.
+- **`a * b` isn't necessarily matmul** → elementwise is `*`, matmul is `@` or `np.matmul`; mixing them yields a fully wrong result (and no error).
+
+## Acceptance checklist
+
+- [ ] Create a `(1000, 1000)` random array; use `%timeit` to compare `a + 1` (vectorized) vs an elementwise loop.
+- [ ] Given `a = np.arange(24)`, `reshape` to `(2, 3, -1)` and state the resulting shape.
+- [ ] Write out the resulting shape of `(100, 32) @ (32, 16)` and verify in code.
+- [ ] Use boolean indexing to select elements of `a` greater than 0, and verify mutating the selection doesn't touch `a`.
+- [ ] Zero-mean each column with `a - a.mean(axis=0, keepdims=True)` and explain why `keepdims=True` is needed.
+- [ ] Build an example where `(100,)` is mis-broadcast as a row vector; fix it with `[:, None]` and compare the results.
+- [ ] Explain the difference between `a.reshape(-1)` and `a.flatten()` (one a view, one a copy).
+
+## Summary
+
+- NumPy's value is vectorization (pushing loops to C) + contiguous memory (dtype-packed); all ML tensor ops rest on this.
+- shape is the throughline of ML code; walk through `(a,b)@(b,c)→(a,c)` before writing a matmul.
+- Three indexing kinds: basic slicing is a view (mutating pollutes the original), boolean/advanced indexing is a copy; if unsure, `.copy()`.
+- Broadcasting is powerful but expands silently — always check `result.shape`; `(n,)` isn't a column vector, use `[:, None]`.
+- dtype is the memory knob: NumPy defaults to `float64`; cast to `float32` before crossing into PyTorch.

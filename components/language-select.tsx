@@ -23,14 +23,8 @@ const LOCALE_BADGES: Record<string, string> = {
   en: "EN",
 };
 
-// Matches defaultLanguage in lib/i18n.ts. useI18n() does not expose the default
-// language, and lib/i18n can't be imported here (it pulls in next/headers).
-const DEFAULT_LANGUAGE = "en";
-
-// With hideLocale:"default-locale", the default-locale URL is rewritten to
-// /[lang]/... internally, so usePathname() returns e.g. "/en/docs/foo" even
-// though the browser shows "/docs/foo". Strip any locale prefix before
-// rebuilding the target path, or switching locales stacks the prefixes.
+// 静态导出无 middleware,hideLocale:"never" 下 URL 总带 locale 前缀(/en、/zh)。
+// usePathname() 返回完整路径如 "/en/docs/foo";strip 前缀得 bare,再按目标 locale 重建。
 function stripLocale(path: string): string {
   if (path === "/zh" || path === "/en") return "/";
   if (path.startsWith("/zh/") || path.startsWith("/en/")) return path.slice(3);
@@ -38,7 +32,6 @@ function stripLocale(path: string): string {
 }
 
 function targetPath(bare: string, locale: string): string {
-  if (locale === DEFAULT_LANGUAGE) return bare;
   return bare === "/" ? `/${locale}` : `/${locale}${bare}`;
 }
 

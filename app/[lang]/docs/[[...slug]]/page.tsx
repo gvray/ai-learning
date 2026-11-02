@@ -18,8 +18,7 @@ export default async function Page(
 ) {
   const params = await props.params;
   if (!params.slug || params.slug.length === 0) {
-    const prefix = params.lang === "zh" ? "/zh" : "";
-    redirect(`${prefix}/docs/python/environment`);
+    redirect(`/${params.lang}/docs/python/environment`);
   }
   const page = source.getPage(params.slug, params.lang);
   if (!page) notFound();

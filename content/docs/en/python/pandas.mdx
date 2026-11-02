@@ -3,4 +3,161 @@ title: Pandas Data Handling
 description: data reading, cleaning, aggregation & transformation
 ---
 
-# Pandas Data Handling
+NumPy teaches you to compute; Pandas teaches you to manage data. ML training data is rarely a clean `np.array` — it's a CSV with headers, missing values, mixed types; it's "user ids don't line up, date formats are messy, half a column is NaN." Pandas is the tool for this kind of structured data: read it, clean it, reshape on demand, feed to the model. This guide focuses on the high-frequency operations in ML data prep, not the full API.
+
+## Why ML uses Pandas: DataFrame = a labeled 2-D table
+
+A NumPy ndarray is a "pure array," indexed by integer position. Real data has column names, row labels, and mixed types (id is int, name is str, amount is float). Pandas' **DataFrame** is built for this: each column can have a different dtype, and every column and row has a label (index).
+
+```python
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv("users.csv")     # read CSV into a DataFrame
+df.head()                         # Jupyter shows the first 5 rows as a table
+df.shape                          # (rows, columns)
+df.columns                        # column names
+df.dtypes                         # each column's dtype
+```
+
+Pandas is built on NumPy: each column is an ndarray underneath. So NumPy's vectorization and broadcasting apply here too — `(df["price"] - df["price"].mean()) / df["price"].std()` is standard normalization. Typing `df.head()` in Jupyter shows the table immediately — the starting point of data exploration.
+
+## Reading & writing
+
+```python
+pd.read_csv("data.csv")                       # read CSV, auto-infers header & types
+pd.read_csv("data.csv", parse_dates=["date"])  # parse date column as datetime
+pd.read_excel("data.xlsx", sheet_name="train") # Excel
+pd.read_json("data.json", lines=True)         # JSONL (one JSON per line, common in LLM data)
+pd.read_parquet("data.parquet")               # Parquet, columnar & compressed, big-data default
+
+df.to_csv("out.csv", index=False)             # write; index=False drops the row index as a column
+df.to_parquet("out.parquet")                   # write Parquet
+```
+
+In ML, Parquet is increasingly preferred over CSV: smaller, faster to read, and it preserves dtypes (CSV round-trips often lose types and need re-specifying). The biggest CSV pitfall is bad type inference — a column mixing numbers and strings gets typed `object` (Python objects, not a compact array), and downstream math silently fails. Build the habit of checking `df.dtypes`.
+
+## Selecting rows & columns: loc vs iloc
+
+This is the biggest beginner obstacle in Pandas; two indexing kinds:
+
+- `loc` — indexes by **label** (column name, row index value), **closed intervals**
+- `iloc` — indexes by **position** (integer offset), **half-open** (like Python slicing)
+
+```python
+df["price"]                       # select one column → Series
+df[["price", "qty"]]              # select multiple → DataFrame
+
+df.loc[0]                         # the row whose label is 0
+df.loc[:, "price"]                # all rows + price column
+df.loc[2:5, "price":"qty"]        # rows labeled 2-5 (inclusive!), columns price-qty (inclusive)
+
+df.iloc[0]                        # row at position 0
+df.iloc[2:5]                      # rows at positions 2, 3, 4 (excludes 5)
+df.iloc[[0, 2]]                   # rows at positions 0 and 2
+```
+
+One line to remember: **`loc` uses labels and includes both ends; `iloc` uses position and excludes the end.** Mixing them is a common Pandas bug — `df.loc[2:5]` includes 5, `df.iloc[2:5]` excludes it; results differ by a row, with no error.
+
+## Missing values: isna / fillna / dropna
+
+Real data always has gaps — empty CSV cells, optional fields, collection failures. Pandas represents missing with `NaN` (float) / `NaT` (datetime) / `pd.NA` (new types). Feeding missing values to a model untouched either crashes or silently distorts the math.
+
+```python
+df.isna().sum()                   # missing count per column — always the first step
+df.dropna()                       # drop any row with a missing value
+df.dropna(subset=["age"])         # only look at the age column
+df.fillna(0)                      # fill with 0
+df["age"].fillna(df["age"].median())   # fill with median (robust to outliers vs mean)
+df["category"].fillna("unknown")      # categorical column gets a placeholder
+```
+
+There's no silver bullet for missing data in ML: dropping loses data, filling with a constant distorts the distribution, filling with statistics needs care — **what to fill depends on why the column is missing and how the model handles it.** The machine-learning chapter covers this; for now: `isna().sum()` to survey first, never blindly `fillna(0)`.
+
+## Type conversion: astype & category
+
+CSV types are often wrong on read and need manual conversion. Pandas types mostly derive from NumPy: `int64`/`float64`/`bool`/`object` (strings, etc.)/`datetime64`.
+
+```python
+df["price"] = df["price"].astype(float)          # to float
+df["id"] = df["id"].astype(str)                  # number to string (ids shouldn't be summed)
+df["flag"] = df["flag"].astype(bool)
+
+df["city"] = df["city"].astype("category")       # low-cardinality categorical → category
+df["city"].cat.codes                              # integer codes
+df["city"].cat.categories                         # the list of categories
+```
+
+**The `category` dtype** is a weapon in ML data prep: low-cardinality columns like city, gender, product category default to `object` (a Python string object per value, wasting memory). Converting to `category` stores integer codes plus a category table, saving an order of magnitude on memory — and many ML libraries consume `category` directly.
+
+Conversions often fail on dirty data: `astype(float)` on `"abc"` raises. First use `pd.to_numeric(df["price"], errors="coerce")` to turn unparseable values into NaN, then handle them as missing.
+
+## Filtering & derived columns: vectorized thinking
+
+```python
+# Filtering: a boolean Series as an index
+expensive = df[df["price"] > 100]
+active = df[(df["status"] == "active") & (df["age"] > 18)]   # multiple conditions with & | ~; parens required
+
+# Derived columns: vectorized, never apply row-by-row
+df["total"] = df["price"] * df["qty"]                       # vectorized op
+df["is_expensive"] = df["price"] > 100                      # boolean column
+df["log_price"] = np.log1p(df["price"])                     # NumPy functions apply directly
+```
+
+The biggest trap is **treating Pandas like Excel and using `apply` row by row** — `df.apply(lambda r: r["price"]*r["qty"], axis=1)` is slow and hard to read. Prefer vectorization (`df["price"] * df["qty"]`), tens to hundreds of times faster. For genuinely complex per-row logic, reach for `np.where` or `np.select`; `apply` is the last resort.
+
+## Grouped aggregation: groupby
+
+"Average order value by city," "purchase count per user" — the core of ML feature engineering.
+
+```python
+df.groupby("city")["price"].mean()                    # mean price per city
+df.groupby("city")["price"].agg(["mean", "median", "count"])  # multiple aggregates
+df.groupby(["city", "status"])["price"].sum()         # group by multiple columns
+df.groupby("city").agg(total=("price","sum"), n=("id","count"))  # named aggregation
+```
+
+The mental model for `groupby` is **split-apply-combine** — split by a column, compute a stat per group, combine back. "Per-user statistical features" in feature engineering are all this: groupby `user_id`, compute mean/sum/count/max, and use them as that user's features.
+
+## Merging: merge & concat
+
+```python
+pd.merge(users, orders, on="user_id")                    # inner join on user_id
+pd.merge(users, orders, on="user_id", how="left")         # left join, keep all left rows
+pd.merge(users, orders, left_on="id", right_on="user_id") # differing column names
+
+pd.concat([df1, df2])                # stack vertically (rows)
+pd.concat([df1, df2], axis=1)        # stack horizontally (columns)
+```
+
+`merge` is a SQL-style join, used to build "users + orders → training samples." `how` decides which rows survive — `inner` (default, intersection), `left`, `right`, `outer` (union). Unmatched keys produce NaN; check with `isna()` afterward.
+
+## Common pitfalls
+
+- **Mixing `loc` / `iloc`** → labels include both ends, positions exclude the end; mixing differs by a row with no error. Learn the distinction.
+- **Overusing `fillna(0)`** → filling 0 in a numeric column may look like a real value; meaningless on categorical columns. Investigate why it's missing first.
+- **Computing on `object` columns** → CSV inference types a column as `object`; `df["price"].mean()` errors or silently miscomputes. Convert with `pd.to_numeric(errors="coerce")`.
+- **`apply` row-by-row instead of vectorizing** → tens of times slower. Use `df["a"] * df["b"]`, not `apply`.
+- **Forgetting to aggregate after `groupby`** → `df.groupby("city")` alone does nothing; you need `.agg(...)` or `["col"].mean()`.
+- **Mutating a view doesn't update the table** → `df[df["x"]>0]` returns a copy; `filtered["y"] = 1` doesn't touch `df`. Mutate the original with `df.loc[mask, "y"] = 1`.
+- **Ignoring `SettingWithCopyWarning`** → Pandas warning you that you may be mutating an ambiguous view-or-copy. Use `loc` to assign explicitly.
+- **CSV round-trips for big tables** → large size, lost types. Use Parquet for big data.
+
+## Acceptance checklist
+
+- [ ] Read a real CSV, run `isna().sum()` per column, and explain your missing-value strategy.
+- [ ] Select rows 3 to 5 of the price column with both `loc` and `iloc`, and explain the difference (inclusive/exclusive end).
+- [ ] Convert an object-typed price column to float with `pd.to_numeric(errors="coerce")` and handle the residual NaN.
+- [ ] Derive a `total = price * qty` column via vectorization (not `apply`), and contrast timing with an `apply` version using `%time`.
+- [ ] groupby `city` to compute mean/median/count of price and store as a new DataFrame.
+- [ ] Left-join a users table and an orders table on `user_id` with `merge`, and check the NaN produced by the join.
+- [ ] Convert a low-cardinality categorical column to `category` and compare memory usage vs `object` (`df.memory_usage()`).
+
+## Summary
+
+- A DataFrame is a labeled 2-D table with one dtype per column; built on NumPy, so vectorization and broadcasting apply.
+- `loc` uses labels and includes both ends; `iloc` uses position and excludes the end — mixing them is a common bug source.
+- Survey missing values with `isna().sum()` before deciding a strategy; never blindly `fillna(0)`.
+- Vectorize instead of `apply` (tens of times faster); `groupby` is the split-apply-combine core of feature engineering.
+- Use Parquet for big data to preserve dtypes; CSV round-trips often lose types.

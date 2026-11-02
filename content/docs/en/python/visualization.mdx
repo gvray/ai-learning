@@ -3,4 +3,146 @@ title: Data Visualization
 description: matplotlib, distribution & relationship visualization
 ---
 
-# Data Visualization
+ML isn't done when the math is — you have to **see** the data to judge the next step. Is the loss curve flattening, is the prediction distribution skewed, how do features relate, do train and test distributions line up? Printing numbers won't show you; a plot reveals it instantly. This guide covers the matplotlib basics and the plot types most used in ML: distributions, relationships, change. Visualizations render inline in Jupyter, paired with the Pandas/NumPy from the last two guides.
+
+## Why ML needs visualization
+
+Numbers tell you "accuracy 0.92"; a plot tells you "the right cut is at 0.3." ML especially needs plots because both data and errors live in distributions:
+
+- **See data distributions** → skew, long tails, outliers; decide whether to log-transform or clip
+- **See relationships** → feature-target correlation; decide which features are useful
+- **See training** → loss curves, whether you're overfitting (train loss drops, val loss rises)
+- **See errors** → residual distribution, where predictions break down
+
+Tuning without plots is tuning knobs blindfolded.
+
+## matplotlib basics: Figure & Axes
+
+matplotlib's object model is two layers: a **Figure** is the whole canvas, an **Axes** is one subplot (a coordinate system). One Figure can hold multiple Axes.
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+fig, ax = plt.subplots()            # one canvas + one subplot
+ax.plot([1, 2, 3], [1, 4, 9])
+ax.set_xlabel("x"); ax.set_ylabel("y"); ax.set_title("y=x²")
+plt.show()                           # optional at end of a Jupyter cell; auto-displays
+```
+
+`plt.subplots()` is the recommended entry — you get the `ax` explicitly and configure via `ax.set_xxx`, more controllable than the global `plt.xlabel` interface. Multiple subplots:
+
+```python
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))   # 1 row, 2 columns
+axes[0].hist(data1); axes[0].set_title("train")
+axes[1].hist(data2); axes[1].set_title("test")
+```
+
+In Jupyter you can skip `plt.show()` at a cell's end — the plot auto-embeds (assuming matplotlib is installed and Jupyter's default behavior). In a script, `plt.show()` is mandatory or nothing pops up.
+
+## Seeing distributions: histograms & box plots
+
+Distribution is the first step in ML data understanding — is a feature normal, long-tailed, where are the outliers.
+
+```python
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+# Histogram: the overall shape
+axes[0].hist(df["price"], bins=50)
+axes[0].set_title("price distribution")
+
+# Box plot: outliers and quantiles
+axes[1].boxplot(df["price"])
+axes[1].set_title("price boxplot")
+```
+
+Histograms show shape (normal, skewed, long-tailed, bimodal); box plots expose median, quartiles, and outliers at a glance. A long tail usually triggers `np.log1p` to compress it — without a plot you wouldn't know to transform.
+
+Bin by subgroup:
+
+```python
+for label, sub in df.groupby("city")["price"]:
+    plt.hist(sub, bins=30, alpha=0.5, label=label)
+plt.legend()
+```
+
+## Seeing relationships: scatter & correlation
+
+Relationships between a feature and the target, or between features, are most direct in a scatter plot.
+
+```python
+plt.scatter(df["area"], df["price"], alpha=0.3)   # area vs price
+plt.xlabel("area"); plt.ylabel("price")
+```
+
+Set `alpha` for transparency — overlapping points darken, showing density; without alpha a dense scatter is just a black blob. ML data has many points; alpha is mandatory.
+
+For multi-variable relationships, a correlation-matrix heatmap:
+
+```python
+corr = df[["area", "rooms", "age", "price"]].corr()   # correlation matrix
+plt.imshow(corr, cmap="coolwarm", vmin=-1, vmax=1)
+plt.colorbar()
+plt.xticks(range(len(corr)), corr.columns, rotation=45)
+plt.yticks(range(len(corr)), corr.columns)
+```
+
+Highly correlated features are often redundant (drop one); high feature-target correlation is often a useful signal. Correlation ≠ causation, but ML uses it for an initial feature filter.
+
+## Seeing change: line plots & training curves
+
+Loss per epoch, predictions over time — line plots.
+
+```python
+epochs = range(1, 21)
+plt.plot(epochs, train_loss, label="train")
+plt.plot(epochs, val_loss, label="val")
+plt.xlabel("epoch"); plt.ylabel("loss"); plt.legend()
+```
+
+The key for training curves: **plot train and val together**. Train keeps dropping while val starts rising = overfitting; both flat = not learning. This is the most direct read on model state; the deep-learning chapter uses it throughout.
+
+Add `label` + `plt.legend()` for multiple curves. Without an x-axis, the default is 0,1,2,...; pass `range(1, n+1)` to start epochs at 1.
+
+## Common tuning: making plots readable
+
+Default plots are often unreadable; a few fixed adjustments:
+
+```python
+plt.figure(figsize=(8, 5))            # canvas size, inches
+plt.hist(x, bins=50)                   # bins: too fine = noise, too coarse = lost info
+plt.scatter(x, y, alpha=0.3, s=10)     # s: point size
+plt.title("..."); plt.xlabel("..."); plt.ylabel("...")
+plt.legend()
+plt.tight_layout()                     # prevent label overlap across subplots
+```
+
+Use semantic color: `cmap="coolwarm"` (blue-white-red, for correlation), `cmap="viridis"` (sequential, perceptually uniform). Avoid the rainbow `jet` — perceptually non-uniform and colorblind-unfriendly; the old matplotlib default, it's deprecated by the community.
+
+## Common pitfalls
+
+- **Tuning without plots** → tuning knobs blindfolded. ML must start by seeing data distribution and training curves.
+- **Dense scatter without alpha** → a black blob, density invisible. Use `alpha=0.3`.
+- **Not tuning histogram bins** → the default is often wrong; too fine = noise, too coarse = lost shape.
+- **Training curves with only train** → can't see overfitting. Train/val must share a plot.
+- **Mixing global `plt.xxx` with `ax.xxx`** → state confusion in complex plots. Standardize on `fig, ax = plt.subplots()` + `ax.set_xxx`.
+- **Forgetting `plt.show()` in a script** → no plot (Jupyter auto, scripts require it).
+- **Using the rainbow `jet`** → perceptually non-uniform, colorblind-unfriendly. Use `viridis`/`coolwarm`.
+- **Overlapping labels across subplots** → forgot `plt.tight_layout()`.
+
+## Acceptance checklist
+
+- [ ] Read a CSV, plot histogram and box plot for a numeric column, identify long tails/outliers, and decide whether to log-transform.
+- [ ] Scatter two features with `alpha` to see density.
+- [ ] Compute a correlation matrix and display it as a heatmap; find the feature most correlated with the target.
+- [ ] Simulate train_loss/val_loss curves and plot them, pointing out the overfitting knee.
+- [ ] Use `plt.subplots(1,2)` to compare the same feature's distribution across train and test sets.
+- [ ] Explain why you'd use `viridis` instead of `jet`, and the colorblind-friendliness argument.
+
+## Summary
+
+- Visualization is ML's eyes: see distributions, relationships, training curves, errors. Skipping it is going blind.
+- matplotlib has two object layers: Figure canvas + Axes subplot; the recommended entry is `fig, ax = plt.subplots()` for the explicit interface.
+- Distributions use histograms/box plots, relationships use scatter/correlation heatmaps, change uses line plots; training curves must plot train/val together.
+- Add alpha to dense scatters, tune bins, avoid jet; `plt.show()` is required in scripts, auto-embedded in Jupyter.

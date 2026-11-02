@@ -133,7 +133,11 @@ const COPY = {
 } as const;
 
 function doc(lang: Lang, slug: string) {
-  return `${lang === "zh" ? "/zh" : ""}/docs/${slug}`;
+  return `/${lang}/docs/${slug}`;
+}
+
+export function generateStaticParams() {
+  return [{ lang: "en" }, { lang: "zh" }];
 }
 
 export default async function HomePage(props: PageProps<"/[lang]">) {

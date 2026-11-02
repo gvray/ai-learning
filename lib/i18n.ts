@@ -1,19 +1,14 @@
 import { defineI18nUI } from "fumadocs-ui/i18n";
-import { headers } from "next/headers";
-import { inferLocale, type Locale } from "./locale";
 
-export type { Locale };
+export type { Locale } from "./locale";
 
-export async function getLocale(): Promise<Locale> {
-  const headersList = await headers();
-  return inferLocale(headersList.get("x-pathname") ?? "");
-}
-
+// hideLocale: "never" —— 静态导出无 middleware,`default-locale` 依赖的 rewrite 不可用,
+// URL 必须显式带 locale 前缀 (/en、/zh),链接与路由才能一致。
 export const i18n = defineI18nUI(
   {
     languages: ["zh", "en"],
     defaultLanguage: "en",
-    hideLocale: "default-locale",
+    hideLocale: "never",
     parser: "dir",
   },
   {

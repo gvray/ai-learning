@@ -3,4 +3,340 @@ title: Python 语法速查
 description: 基础语法、函数与模块、异常与文件处理
 ---
 
-# Python 语法速查
+本篇假设你已经会编程，只需要把 Python 的写法和心智模型快速对齐到能干活。重点放在 ML 工作里高频出现的部分：可变与不可变、切片、字典与解包、`*args/**kwargs`、类型标注、上下文管理器——这些既是日常代码的基本盘，也是读 PyTorch/Pandas 源码时的拦路虎。不是从零教程，遇到生僻语法查[官方文档](https://docs.python.org/3/reference/)即可。
+
+## 变量与类型：动态类型，但不是没有类型
+
+Python 变量是**名字绑定到对象**，不存值本身。类型挂在对象上，名字随时可重新绑定到别的类型——这是"动态类型"的真正含义。
+
+```python
+x = 1          # int
+x = "abc"      # 合法，x 现在绑到 str
+```
+
+核心内置类型：
+
+| 类型 | 示例 | 可变性 |
+| --- | --- | --- |
+| `int` / `float` / `bool` / `str` | `1`, `3.14`, `True`, `"a"` | **不可变** |
+| `tuple` | `(1, 2)` | **不可变** |
+| `list` | `[1, 2]` | 可变 |
+| `dict` | `{"a": 1}` | 可变 |
+| `set` | `{1, 2}` | 可变 |
+| `NoneType` | `None` | 单例（不可变） |
+
+**可变 vs 不可变是 Python 最大的坑**。函数传参、默认参数、赋值拷贝全都绕不开它——见下文"常见误区"。
+
+数字不分长短：`int` 自动大整数，没有溢出。`bool` 是 `int` 子类（`True == 1`）。字符串不可变，"修改"字符串实际是造新串。
+
+## 字符串：f-string 与常用操作
+
+```python
+name, n = "numpy", 3
+f"{name} 版本 {n}"            # 'numpy 版本 3'
+f"{3.14159:.2f}"              # '3.14'  格式化
+f"{n:>5}"                     # '    3' 右对齐
+"; ".join(["a", "b", "c"])   # 'a; b; c'
+"1,2,3".split(",")           # ['1', '2', '3']
+"  hi  ".strip()             # 'hi'
+"a;b;c".replace(";", "-")    # 'a-b-c'
+```
+
+f-string 是首选拼接方式——通常比 `%`/`.format()` 更快，且嵌入表达式更清晰。
+
+## 列表与切片
+
+切片是 ML 的高频操作——NumPy/Pandas 的索引逻辑都源自这里。
+
+```python
+a = [10, 20, 30, 40, 50]
+a[0]          # 10     正向索引从 0
+a[-1]         # 50     负索引从末尾
+a[1:4]        # [20,30,40]  起点含、终点不含
+a[:2]         # [10,20]
+a[2:]         # [30,40,50]
+a[::2]        # [10,30,50]  步长 2
+a[::-1]       # [50,40,30,20,10]  反转
+
+a.append(60); a.pop()        # 入/出栈
+a.extend([70, 80])           # 原地拼接，别用 +（新建列表）
+```
+
+切片是**浅拷贝**：`b = a[:]` 得到新列表，但元素本身（若可变）仍共享引用。NumPy 的基本切片通常返回**视图**（改 `b` 会动 `a`），而高级索引（fancy indexing）返回副本——改数据前先确认拿的是视图还是副本，否则数据会被悄悄改掉。
+
+Python `list` 与 NumPy `ndarray` 的运算语义也不同，这是从语法跨向 ML 的关键认知：
+
+```python
+import numpy as np
+[1, 2, 3] * 2            # [1, 2, 3, 1, 2, 3]   list 的 * 是重复序列
+np.array([1, 2, 3]) * 2  # array([2, 4, 6])      ndarray 的 * 是逐元素运算
+```
+
+读 ML 代码遇到 `data * 2`，先确认 `data` 是 list 还是 ndarray——同样的 `*` 语义完全不同。
+
+容器推导式：
+
+```python
+[x*x for x in range(5)]                       # [0,1,4,9,16]
+[x for x in nums if x > 0]                    # 过滤
+{k: len(v) for k, v in model_cfg.items()}    # 字典推导
+{line.strip() for line in lines}              # 集合推导
+```
+
+推导式适合简单的数据转换和过滤，简单场景比 `for`-append 更清晰，通常也更高效（CPython 有专用字节码）；但逻辑复杂、嵌套过深时普通 `for` 循环更易读，别为简短而用推导式。
+
+把方括号换成圆括号就是**生成器表达式**——惰性求值，逐个产出，不提前构造整个列表：
+
+```python
+doubled = (x * 2 for x in range(1_000_000))   # 不占大内存
+total = sum(x * x for x in range(1000))       # 直接喂给聚合函数
+```
+
+大数据集和 ML 数据加载靠这个思想（`range` 的惰性同理）——按需产出而非一次性物化全部，是 DataLoader 流式读数据的基础。
+
+## 字典、元组、解包
+
+字典在 ML 里无处不在：配置、超参、数据样本、结果记录。
+
+```python
+cfg = {"lr": 1e-3, "epochs": 10, "model": "resnet"}
+cfg["lr"]                    # 取值
+cfg.get("batch", 32)         # 不存在返回默认 32（不抛错）
+cfg["weight_decay"] = 1e-4   # 插入/更新
+del cfg["model"]             # 删除
+list(cfg)                    # ['lr','epochs','weight_decay']  迭代默认走键
+for k, v in cfg.items(): ... # 同时拿键值
+"lr" in cfg                  # True  判断键存在
+```
+
+3.7+ 起 dict **保持插入顺序**——configs 和结果转 JSON 顺序稳定，配合锁文件让实验可复现。
+
+元组不可变，常用于"固定结构"的记录和多返回值。解包是核心写法：
+
+```python
+shape = (3, 224, 224)
+c, h, w = shape              # 解包
+_, last = [1, 2, 3]          # 用 _ 忽略
+first, *rest = [1, 2, 3, 4]  # rest = [2,3,4]  星号收集
+
+def minmax(seq):
+    return min(seq), max(seq)   # 返回的是元组
+lo, hi = minmax([3, 1, 2])      # 直接解包
+```
+
+**可变默认参数是经典陷阱**：`def f(x, items=[])` 里那个 `[]` 只创建一次，跨调用共享，会累积污染。默认用 `None` 哨兵：
+
+```python
+def f(x, items=None):
+    items = [] if items is None else items   # 每次新建
+```
+
+## 控制流
+
+```python
+if x > 0:
+    ...
+elif x == 0:
+    ...
+else:
+    ...
+
+for item in iterable: ...     # Python 的 for 是遍历，不是 C 式计数
+for i in range(5): ...        # 0..4
+for i, v in enumerate(lst): ...   # 同时拿索引和值
+for a, b in zip(xs, ys): ...      # 并行遍历
+while cond: ...
+```
+
+`range` 是惰性的，不占内存。`enumerate`/`zip` 处理数据对齐很常用——`zip` 默认按短的截断会静默丢数据，本应等长时用 `zip(xs, ys, strict=True)`（3.10+）直接报错暴露问题，要按长的对齐则用 `itertools.zip_longest`。
+
+**真值判断**：`if data:` / `if not data:` 直接把对象当布尔用。空容器、`""`、`0`、`0.0`、`None` 都是假值，其余为真。
+
+```python
+if not data:               # data 为空列表/None/0... 都会进这里
+    raise DataError("空数据")
+```
+
+注意 `0` 也是假值——`if not count:` 会把合法的计数 0 当成"没有数据"，统计/计数场景要显式判断 `if count == 0:` 或 `if len(data) == 0:`。
+
+`==` 比的是**值相等**，`is` 比的是**同一对象**。判断 `None` 一律用 `is None`（PEP 8 规定），别用 `== None`。小整数缓存（`a=1; b=1; a is b` 为 `True`）会制造 `is` 能用的错觉，但这是实现细节，跨值不可靠。
+
+## 函数：参数、标注与作用域
+
+```python
+def train(X, y, lr=1e-3, epochs=10):
+    ...
+
+train(X, y, lr=1e-2)          # 关键字参数：调用时更清晰
+train(X, y, epochs=5, lr=1e-2)  # 关键字参数可乱序
+```
+
+`*args` 收多余的**位置参数**成元组，`**kwargs` 收多余的**关键字参数**成字典。读框架源码时这两个几乎必现：
+
+```python
+def f(*args, **kwargs):
+    print(args, kwargs)
+f(1, 2, a=3)                  # (1, 2) {'a': 3}
+
+def conv(in_ch, out_ch, *, bias=False, kernel=3): ...
+# * 之后只能用关键字传：conv(3, 64, True) 报错，必须 conv(3, 64, bias=True)
+```
+
+`*` 单独出现在参数列表里，强制其后的参数必须用关键字——库 API 用来防位置写错，是现代 Python 接口设计的标配。
+
+转发明是 ML 框架里极常见的模式：把 `**cfg` 整包传给下游。
+
+```python
+def make_layer(cfg):
+    return Conv(**cfg)         # 字典展开成关键字参数
+```
+
+**类型标注**不强制运行时检查，但能让 IDE、mypy、读代码的人受益。现代 ML 代码（PyTorch、FastAPI）重度使用：
+
+```python
+from typing import Optional
+
+def load(path: str, split: float = 0.2) -> tuple[list, list]:
+    ...
+
+# Python 3.10+ 可用新语法：list[int] | None 代替 Optional/Union
+```
+
+标注是"提示"不是"契约"——Python 运行时不校验。需要真正校验用 `pydantic`（FastAPI/RAG 工程里会大量见到）。
+
+**作用域**：函数内赋值默认创建局部变量。要在函数内改外层变量，用 `global`/`nonlocal`——但 ML 代码里基本用容器（dict/list）跨作用域带状态，少碰 `global`。LEGB 查找顺序：Local → Enclosing → Global → Built-in。
+
+## 模块与导入
+
+```python
+import numpy as np                  # 起别名（社区约定 np/pd/torch）
+from torch import nn                # 只拿子模块
+from torch.nn import functional as F
+from typing import Optional, List   # 多个名字
+```
+
+Python 没有真正的"私有"：名字加下划线前缀（`_helper`）只是约定"内部用"，照样能访问；双下划线 `__name` 触发名称改写（name mangling），不是访问控制。读源码见到 `_xxx` 就知道是内部实现，不该在外部依赖它。
+
+`__name__ == "__main__"` 是脚本入口惯用法，让文件既能直接跑又能被导入而不执行副作用：
+
+```python
+def main():
+    ...
+
+if __name__ == "__main__":
+    main()
+```
+
+包是含 `__init__.py` 的目录（现代 Python 可省略，但有 `__init__.py` 语义最清晰）。`__init__.py` 在包被导入时执行一次，常用于聚合导出：`from .sub import X` 让上层 `import pkg` 就能拿到 `pkg.X`。
+
+## 异常处理
+
+```python
+try:
+    data = load(path)
+except FileNotFoundError:
+    data = []
+except (KeyError, ValueError) as e:   # 捕获多种，绑定异常对象
+    print(f"解析失败: {e}")
+else:
+    print("无异常时才执行")            # try 成功后的逻辑
+finally:
+    cleanup()                          # 无论是否异常都执行
+```
+
+- **具体优先**：先写具体异常（`FileNotFoundError`），最后兜底才考虑 `Exception`。直接 `except Exception:` 会吞掉你没想到的 bug（包括 `KeyboardInterrupt` 之外的多数错误），调试时找不到根因。
+- **别吞异常**：`except: pass` 是反模式。真要忽略也得 `except SpecificError: pass` 并写清为什么。
+- **抛异常**用 `raise ValueError("msg")`；自定义异常继承 `Exception`，组织成层级便于精确捕获。
+
+```python
+class DataError(Exception):
+    pass
+
+if len(data) == 0:
+    raise DataError("空数据集，无法训练")
+```
+
+<Callout type="info">
+ML 调试里"异常被静默吞掉"比报错更致命——训练循环 catch 了一层就 continue，loss 算成 NaN 还在跑，几小时后才察觉。数据处理代码宁可让它炸出来，也别用宽泛 except 掩盖。
+</Callout>
+
+## 文件与上下文管理器
+
+老写法要手动关文件，忘了就泄露句柄：
+
+```python
+f = open("data.txt", "r", encoding="utf-8")   # 永远显式指定 encoding
+text = f.read()
+f.close()
+```
+
+`with` 自动管理资源，**无论正常退出还是异常都关闭**——这是标准写法：
+
+```python
+with open("data.txt", encoding="utf-8") as f:
+    text = f.read()        # 一次性读完
+    # 或按行
+    for line in f:
+        process(line.strip())
+```
+
+文件模式：`r` 读 / `w` 覆盖写 / `a` 追加 / `x` 不存在才建。文本加 `t`（默认），二进制加 `b`（处理图片、模型权重等）。`encoding="utf-8"` 在跨平台时建议显式——默认编码随系统 locale、Python 版本和 UTF-8 mode 变化，显式指定避免依赖运行环境。
+
+`pathlib` 是现代路径操作首选，比 `os.path` 字符串拼接清晰：
+
+```python
+from pathlib import Path
+
+root = Path("data/raw")
+for p in root.glob("**/*.csv"):   # 递归找所有 csv
+    print(p.name, p.stem, p.suffix)
+out = Path("out") / "result.json"  # / 拼路径，跨平台
+out.parent.mkdir(parents=True, exist_ok=True)  # 递归建目录
+```
+
+JSON 与 CSV 是 ML 数据进出最常见的格式：
+
+```python
+import json, csv
+
+with open("cfg.json", encoding="utf-8") as f:
+    cfg = json.load(f)            # 读成 dict/list
+with open("out.json", "w", encoding="utf-8") as f:
+    json.dump(result, f, ensure_ascii=False, indent=2)  # ensure_ascii=False 保中文
+
+with open("data.csv", encoding="utf-8") as f:
+    for row in csv.DictReader(f):   # 每行成 dict，按表头取值
+        process(row["label"])
+```
+
+**上下文管理器不止管文件**。任何 `__enter__`/`__exit__` 的对象都能 `with`，ML 里典型例子：`with torch.no_grad():` 关梯度、`with torch.cuda.amp.autocast():` 自动混合精度、`with wandb.init(...) as run:` 管实验记录。把 `with` 理解成"进入某状态、保证退出时还原"，文件只是最简单的一种。
+
+## 常见误区
+
+- **可变默认参数** `def f(x, lst=[])` → 跨调用共享同一个 list。用 `lst=None` 哨兵。
+- **`is` 当 `==` 用** → `is` 只用于 `None`/`True`/`False` 或显式判断同一对象；比值用 `==`。
+- **浅拷贝误当深拷贝** → `b = a` 只是绑定；`b = a[:]` 浅拷贝；要彻底独立用 `copy.deepcopy`。
+- **`except Exception: pass` 吞异常** → 隐藏 bug，ML 训练尤其致命。捕获要具体，至少记录日志。
+- **`open` 不用 `with`** → 异常路径下文件句柄泄露；一律 `with open(...)`。
+- **忘记 `encoding="utf-8"`** → Windows 默认 GBK，跨平台读中文必乱码。
+- **`zip` 截断没察觉** → 长度不等静默丢数据，对齐场景用 `itertools.zip_longest`。
+- **混用 `*args`/`**kwargs` 顺序** → 参数顺序必须：位置 → `*args` → 关键字 → `**kwargs`；`*` 后的强制关键字参数不能漏传。
+- **类型标注当运行时校验** → 标注只是提示，不强制；要校验用 `pydantic` 或 `beartype`。
+
+## 实践验收
+
+- [ ] 写函数 `def split_batch(x, n=2)` 把列表切成 `n` 份，用切片实现，并说明为何默认参数用 `None` 而非 `[]`。
+- [ ] 用 `enumerate` + `zip` 同时遍历两个等长列表并打印索引。
+- [ ] 用推导式把 `{"a": [1,2], "b": [3]}` 转成 `{"a": 2, "b": 1}`（值取长度）。
+- [ ] 写一个读 CSV、跳过空行、捕获解析异常但不吞掉、用 `pathlib` 定位的函数。
+- [ ] 解释 `with open(...)` 相比 `open()`+`close()` 解决了什么问题，并说出一个 ML 框架里同样用 `with` 的例子。
+- [ ] 说明 `==` 与 `is` 的区别，以及为什么判断 `None` 必须用 `is None`。
+- [ ] 解释 `if not count:` 为何会在计数场景出错，写出正确写法。
+
+## 小结
+
+- 动态类型≠没类型；可变/不可变是最大的坑，函数默认参数和拷贝都绕不开。
+- 切片、字典、解包、`*args/**kwargs`、类型标注是读 ML 框架源码的基本盘。
+- 真值判断（`if not data:`）方便但 `0`/`None`/空容器都是假值，计数场景别误判；生成器表达式惰性求值是数据流式加载的基础。
+- 异常要具体捕获、绝不静默吞；文件和资源一律 `with`，`encoding` 永远显式。
+- `is` 判同一、`==` 判相等，`None` 判断固定用 `is None`。

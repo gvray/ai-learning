@@ -2,7 +2,10 @@ import { createGetUrl } from "fumadocs-core/source";
 import { i18n } from "./i18n";
 
 export const appName = "AI Learning";
-export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+// 默认指向 GitHub Pages 部署地址(gvray/ai-learning → /ai-learning 子路径);
+// 自定义域名时用 NEXT_PUBLIC_SITE_URL 覆盖。
+export const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://gvray.github.io/ai-learning";
 export const docsRoute = "/docs";
 export const docsImageRoute = "/og/docs";
 export const docsContentRoute = "/llms.mdx/docs";

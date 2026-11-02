@@ -3,4 +3,167 @@ title: Jupyter Notebook Workflow
 description: interactive development, experiment logging, debugging
 ---
 
-# Jupyter Notebook Workflow
+Jupyter is an **interactive notebook environment**: in a browser you organize code, output, plots, and Markdown prose into "cells," executing one block at a time and seeing the result immediately. It isn't a language or an editor — you still write Python, and it still runs the libraries you `uv add`'d; only the REPL-style instant feedback drops the cost of "trying" to near zero.
+
+Jupyter is the workhorse of ML exploration: run a snippet and see the result instantly, with code, plots, and prose on one screen, and tweak a parameter to rerun a single cell. But notebook freedom is a double-edged sword — cells can execute in any order, state drifts, and "works on my machine" mysticism is worst here. This guide covers how to use it right, so the notebook serves the experiment instead of laying traps.
+
+## Why ML uses Jupyter
+
+Data exploration, trying models, tuning parameters all need **instant feedback**: glance at a distribution, run a training epoch, draw a plot, and judge the next step immediately. A script forces you to `python x.py` + `print` + edit in a loop; a notebook cuts the friction of "trying" to nearly zero.
+
+With code + plots + Markdown prose in one document, it's a natural **experiment log**: hypothesis, process, conclusion, and evidence plots all together. Almost nobody scripts the exploration phase.
+
+The cost: notebooks are hard to diff, hard to version-control, and break reproducibility once execution order drifts. The disciplines below are how to dodge those traps.
+
+## Install & launch: with uv
+
+Jupyter uses the same uv workflow from the environment guide — install it into the project environment:
+
+```bash
+uv add jupyterlab numpy matplotlib     # JupyterLab + the libraries you'll use next
+uv run jupyter lab                    # launch; a browser opens automatically
+```
+
+In the browser, the Lab interface opens. In the left file tree, navigate into your project directory and click `New → Notebook → Python 3` to create a `.ipynb` file.
+
+You may see two names — **JupyterLab** and **Jupyter Notebook**: JupyterLab is the modern interface (tabs, file browser, terminal in one), Notebook is the classic single-document interface. `jupyter lab` launches Lab; both open the same `.ipynb` files. This course uses Lab throughout.
+
+## Cells & kernel: the execution model
+
+A notebook is built from **cells**, two kinds:
+
+- **Code cell**: executable code, with output (including plots) below it
+- **Markdown cell**: prose, formulas, conclusions
+
+What runs the code isn't the notebook itself but a **kernel** — a long-lived Python process. Running a cell sends its code to the kernel; the kernel's state (variables, imports, function definitions) persists across cells.
+
+```text
+In [1]: import numpy as np
+In [2]: a = np.array([1,2,3])     # a lives in the kernel
+In [3]: a.mean()                  # a from the previous cell is available
+```
+
+Key operations:
+
+- `Shift+Enter`: run the current cell, advance to the next
+- `Kernel → Restart & Run All`: **restart the kernel and rerun from the top** — verifies the notebook actually reproduces top-to-bottom
+- `Kernel → Interrupt`: break out when stuck (infinite loop / long training run)
+
+`In [1]` / `In [2]` are execution counters reflecting the **actual execution order**, not the written order. Seeing `In [5]` above `In [3]` means you jumped around — a hazard is already in place.
+
+A code cell's return value or `print` output shows directly beneath it, and plots are embedded inline — this "seeing it immediately" is what sets a notebook apart from a script:
+
+```python
+import matplotlib.pyplot as plt
+x = [1, 2, 3, 4]
+plt.plot(x, [v*v for v in x])    # a y=x² curve renders right below the cell
+```
+
+The last expression's value also auto-displays (no `print` needed) — handy in the NumPy/Pandas exploration coming later, where typing a variable name surfaces the array or table.
+
+## Execution order & hidden state: the biggest trap
+
+The classic notebook failure: the code is right there on top, looks fine, yet it won't run after a restart. The root cause is that cells **can execute in any order** — you may have mutated a variable further down, then rerun a cell above, so that upper cell depends on state that was only "manually run later." After a restart that implicit state is gone, and it blows up.
+
+The discipline:
+
+- **Run top to bottom**; don't jump backward. To change something above, rerun from that cell downward, or just Restart & Run All.
+- **Always Restart & Run All to validate after editing** — confirm the notebook is self-consistent.
+- **Critical cells must not depend on "previously run by hand" implicit state** — a cell should import and define its own variables.
+
+<Callout type="info">
+This discipline maps directly onto the reproducibility thread from the environment guide: notebook execution-order freedom is precisely the opposite of reproducibility. Restart & Run All is the only way to compress "the state I hand-tuned" back into "state the code can rebuild top to bottom." Run it before delivering an experiment or handing off to a colleague.
+</Callout>
+
+## Editing external code without restarting: autoreload
+
+A common ML scene: exploring in a notebook while the model code lives in `model.py`, editing `model.py` and re-trying in the notebook. But Python's default `import` reads the module once — edit `model.py` and the notebook still holds the old version, forcing a kernel restart (and losing all the state you built up).
+
+The fix is the `autoreload` magic, placed at the very top of the notebook:
+
+```python
+%load_ext autoreload
+%autoreload 2
+import model            # after editing model.py, the next cell execution reloads it
+```
+
+`%autoreload 2` applies to all modules; save the `.py` after editing and the next cell runs the new code, with kernel state preserved. It saves countless restarts while iterating on model architecture.
+
+## Magic commands: a few common in ML
+
+`%`-prefixed are **line magics** (one line), `%%`-prefixed are **cell magics** (the whole cell):
+
+```python
+%timeit np.dot(a, b)          # run many times, report the fastest — benchmark vectorized ops
+%%time                        # time the whole cell once (a training epoch)
+%matplotlib inline            # embed plots directly in cell output
+%time train_one_epoch()       # time once (better than timeit for long runs)
+%debug                        # after an exception, enter post-mortem to inspect the frame (below)
+```
+
+`%timeit` suits micro-benchmarks (millisecond-scale ops); for a training run (seconds to minutes) use `%%time` or `%time` — `%timeit` reruns many times and can't afford a long task.
+
+## Experiment logging: the notebook as a log
+
+A notebook is an experiment log: Markdown cells for hypothesis and conclusion, Code cells to run the experiment, plots and outputs as evidence. Suggested structure: a Markdown cell at the top for **goal + conclusion**, then the process below.
+
+But notebooks are hard to diff, output files are large, and committing them to git adds huge noise. Version-control discipline:
+
+- **Clear outputs before committing**: `jupyter nbconvert --clear-output --inplace notebook.ipynb`, or set up nbstripout to do it automatically
+- **For diff-friendly history**: use [jupytext](https://jupytext.readthedocs.io/) to sync the notebook as a `.py` file (with cell markers) — version-controllable and syncs back to `.ipynb`
+- **Pull important conclusions up to a top Markdown cell** — don't make readers scroll through dozens of cells to find the answer
+
+## Debugging: %debug and post-mortem
+
+After a notebook error, immediately run `%debug` in a new cell to enter **post-mortem**: it stops at the frame where the exception occurred, all locals are in scope, and you can inspect `a.shape`, `type(x)` to pin down the problem.
+
+```python
+# some cell raised an exception
+%debug                # enter the scene; inspect with p a.shape / p x; quit with q
+```
+
+Or drop in manually inside code:
+
+```python
+try:
+    result = risky_call()
+except Exception:
+    import pdb; pdb.pm()    # post-mortem, stop at the exception frame
+```
+
+Far more efficient than `print` debugging — especially when a tensor shape is wrong mid-training; step into the scene and check `shape` and `dtype` directly.
+
+## From notebook to script: exploration matures into engineering
+
+Notebooks suit exploration, not production/reuse/testing. Once exploration matures, distill the code into `.py` modules; keep the notebook as a record or demo.
+
+```bash
+jupyter nbconvert --to script notebook.ipynb     # export .py
+jupyter nbconvert --to html notebook.ipynb        # export HTML for sharing
+```
+
+`jupytext --sync` keeps `.ipynb` and `.py` in two-way sync — one codebase, two surfaces for exploration and engineering. The typical ML engineering path: explore in a notebook → extract `train.py` / `model.py` → run experiments via scripts, keep the notebook for analysis.
+
+## Common pitfalls
+
+- **Out-of-order execution making hidden state** → the root cause of "works on my machine." After editing, Restart & Run All.
+- **Treating a notebook as production code** → hard to test, hard to reproduce, hard to diff. Once exploration matures, move to `.py`.
+- **Editing an imported module and restarting repeatedly** → not using autoreload, losing kernel state for nothing.
+- **Committing notebooks with outputs to git** → diffs are all output noise and the repo bloats. Clear outputs or use nbstripout.
+- **Using `%timeit` for long tasks** → it reruns many times; a training run can't afford it. Use `%%time`.
+- **Not knowing about `%debug`** → still scattering `print` to debug after an exception. Go straight to post-mortem.
+
+## Acceptance checklist
+
+- [ ] Deliberately run cells out of order to create hidden state, then Restart & Run All to reproduce the "won't run" problem.
+- [ ] Configure `%autoreload 2` and confirm editing an external `.py` takes effect without a kernel restart.
+- [ ] Use `%%time` to compare two implementations (e.g. a loop vs vectorized).
+- [ ] Trigger an exception and use `%debug` to inspect the frame and locate the problem.
+- [ ] Use `jupyter nbconvert` to convert a notebook to `.py` and run it.
+- [ ] Explain when a notebook should be converted to a script, and why notebooks don't suit production code.
+
+## Summary
+
+- A notebook is an exploration tool, not production code; execution-order freedom is the biggest trap, kept in check by Restart & Run All.
+- `autoreload` lets you iterate without restarting the kernel; `%debug` takes exception diagnosis straight to the scene.
+- Clear outputs before committing (or use jupytext to store `.py`); once exploration matures, move to scripts and keep the notebook as an experiment log.

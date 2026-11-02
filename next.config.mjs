@@ -10,6 +10,11 @@ const config = {
 
   reactStrictMode: true,
 
+  experimental: {
+    // root layout 位于 [lang] 动态段下,用 global-not-found 处理根路径与未匹配路由的 404。
+    globalNotFound: true,
+  },
+
   turbopack: {
     // Turbopack CSS parser 误报 ::highlight(fd-search)（标准伪元素、上游 bug）；error-recovery 后规则未丢失、功能正常，修复后移除。
     ignoreIssue: [

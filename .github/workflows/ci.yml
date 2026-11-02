@@ -10,8 +10,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  ci:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,3 +39,34 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # GitHub Pages 默认用 Jekyll,会忽略 _ 开头的目录(_next/ 即所有 CSS/JS);
+      # .nojekyll 关闭 Jekyll,让 _next/ 正常 serve。
+      - name: Disable Jekyll
+        run: touch out/.nojekyll
+
+      # 根路径无对应页面(global-not-found 会接管但返回 404);
+      # 生成一个 200 的根 index.html 做软重定向到默认 locale,避免根 URL 返回 404。
+      - name: Generate root redirect
+        run: printf '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>AI Learning</title><link rel="canonical" href="en/"><meta http-equiv="refresh" content="0; url=en/"></head><body><script>location.replace("en/")</script><a href="en/">Continue</a></body></html>' > out/index.html
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -3,4 +3,178 @@ title: Python for ML in Practice
 description: full data reading, cleaning, analysis & experiment flow
 ---
 
-# Python for ML in Practice
+The previous six guides taught the tools: environment, syntax, Jupyter, NumPy, Pandas, visualization. This one chains them into a complete ML workflow — from a raw CSV to an experiment you can evaluate and review. No new algorithms (linear regression gets its own treatment in the machine-learning chapter); this is about **how to run an ML task end-to-end with the Python toolchain**: read, clean, feature, train, evaluate, review. It closes the Python-for-ML block and previews the hands-on work before main thread A dives into ML principles.
+
+## Goal: a reproducible ML experiment flow
+
+An ML experiment isn't "write a model and train" — it's this chain:
+
+```text
+raw data → read → clean → features → train/val split → train → evaluate → review
+```
+
+Every step uses a tool you've learned, and every step must be **reproducible** — exactly what the environment guide's uv lockfile and the jupyter guide's Restart & Run All were for. This guide walks the chain with synthetic data.
+
+## Data: synthesize a regression dataset
+
+Use NumPy to build noisy synthetic data modeling "house area predicts price." Synthetic data's advantage: you know the true relationship and can verify the model learned it.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+rng = np.random.default_rng(seed=42)          # fixed seed for reproducibility
+n = 500
+area = rng.uniform(30, 200, n)                 # area 30-200
+rooms = rng.integers(1, 6, n)                    # bedrooms 1-5
+age = rng.uniform(0, 50, n)                      # age 0-50 years
+# True relationship: price = 5000*area + 20000*rooms - 1000*age + noise
+price = 5000 * area + 20000 * rooms - 1000 * age + rng.normal(0, 20000, n)
+
+df = pd.DataFrame({"area": area, "rooms": rooms, "age": age, "price": price})
+df.head()
+```
+
+`rng = np.random.default_rng(seed=42)` is the key to reproducibility — a fixed seed yields the same random numbers every run. Anything random in ML (splits, initialization, sampling) must be seeded, or results aren't reproducible and comparisons are meaningless.
+
+## Explore: see the data before modeling
+
+Don't train first. `df.describe()` for stats, plot distributions, check correlation:
+
+```python
+df.describe()                                  # mean/quantiles/missing, one glance
+df.isna().sum()                                 # synthetic data has none; real data, always check
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 3))
+for ax, col in zip(axes, ["area", "rooms", "age"]):
+    ax.hist(df[col], bins=30); ax.set_title(col)
+
+# Correlation: which features relate to price
+corr = df.corr()
+corr["price"].sort_values(ascending=False)     # area should be strongly correlated
+```
+
+Run this cell by cell in Jupyter, seeing results instantly — the exploration loop from the jupyter guide. Seeing `area` strongly correlated with `price` and `age` weakly negative, you know what to expect. With real data this step surfaces anomalies (zero area, negative price, clumps of missing values) that drive the cleaning strategy.
+
+## Split: train set and test set
+
+Evaluating a model needs **data it hasn't seen** — doing well on the train set doesn't count. Split with scikit-learn (the main library in the machine-learning chapter; here we just use `train_test_split`):
+
+```python
+from sklearn.model_selection import train_test_split
+
+X = df[["area", "rooms", "age"]].values        # feature matrix, Pandas → NumPy
+y = df["price"].values
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42        # 20% test, fixed seed
+)
+X_train.shape, X_test.shape                     # ((400,3), (100,3))
+```
+
+`random_state=42` is again for reproducibility — the same code yields the same split across runs. `df[...].values` converts the DataFrame features into a NumPy array for the model — the typical Pandas → NumPy → model data flow.
+
+## Train: a minimal linear regression
+
+Use scikit-learn's linear regression (principles left to the ML chapter; here just the API). Training is one `fit`:
+
+```python
+from sklearn.linear_model import LinearRegression
+
+model = LinearRegression()
+model.fit(X_train, y_train)                    # train
+model.coef_, model.intercept_                  # learned coefficients: ≈ [5000, 20000, -1000]
+```
+
+`model.coef_` should be close to the true coefficients `[5000, 20000, -1000]` we used to build the data — the model learned the real relationship, and that's the validation. If the coefficients are far off, something's wrong with the data or training. That's the synthetic-data advantage: a ground truth to check against.
+
+## Evaluate: generalization on the test set
+
+```python
+from sklearn.metrics import mean_squared_error, r2_score
+
+pred = model.predict(X_test)
+rmse = np.sqrt(mean_squared_error(y_test, pred))
+r2 = r2_score(y_test, pred)
+rmse, r2                                         # RMSE ≈ 20000 (the noise level), R² ≈ 0.99
+```
+
+- **RMSE** (root mean squared error): how far predictions are from truth, in price units — intuitive. Here it should match the noise std of 20000 we added.
+- **R²** (coefficient of determination): 0-1, 1 is perfect. 0.99 means a strong fit.
+
+Looking only at train metrics is self-deception — look at the **test set**. Good train, bad test = overfitting. Here both are close and good, so the linear relationship was learned. The principles and choice of metrics are covered in the ML chapter.
+
+## Review: inspect the error distribution
+
+Beyond numbers, plot the errors. A residual plot (prediction - truth) exposes systematic bias:
+
+```python
+residual = pred - y_test
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+axes[0].scatter(pred, residual, alpha=0.3); axes[0].axhline(0, color="r")
+axes[0].set_title("residual vs prediction"); axes[0].set_xlabel("pred"); axes[0].set_ylabel("residual")
+axes[1].hist(residual, bins=30); axes[1].set_title("residual distribution")
+```
+
+Residuals should scatter randomly around 0 and be roughly normal. A trend (residuals growing with predictions) means the model missed some relationship — add features or change model. This is the "see errors" step from the visualization guide — the number says R²=0.99, the residual plot says whether there's systematic bias.
+
+## Distill into a reproducible script
+
+Exploration happens in Jupyter; once it matures, distill it into a script — the engineering transition from the jupyter guide. A reproducible experiment script:
+
+```python
+# train.py
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+SEED = 42
+
+def load_data(path):
+    return pd.read_csv(path)
+
+def main():
+    df = load_data("data.csv")
+    X = df[["area", "rooms", "age"]].values
+    y = df["price"].values
+    X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=SEED)
+    model = LinearRegression()
+    model.fit(X_tr, y_tr)
+    pred = model.predict(X_te)
+    print(f"RMSE: {np.sqrt(mean_squared_error(y_te, pred)):.2f}")
+    print(f"R²: {r2_score(y_te, pred):.4f}")
+
+if __name__ == "__main__":
+    main()
+```
+
+A fixed `SEED`, `if __name__ == "__main__"` (the entry idiom from the syntax guide), and a function-ized structure — the disciplines from earlier guides converge here into reproducible engineering. Run it with `uv run python train.py` (the uv workflow from the environment guide).
+
+## Common pitfalls
+
+- **Not fixing the random seed** → splits and initialization differ each run, results aren't reproducible, comparisons are meaningless. Use `seed=42` / `random_state=42`.
+- **Evaluating on the train set** → self-deception; always use the test set. Good train, bad test = overfitting.
+- **Training without exploration** → modeling without understanding the distribution is going blind. `describe()` + plots first.
+- **Numbers only, no residual plot** → R²=0.99 can still hide systematic bias. Residuals expose trends.
+- **Not distilling Jupyter exploration into a script** → hard to reproduce, reuse, test. Mature → `.py`.
+- **Not checking synthetic-data coefficients against the truth** → wastes the synthetic-data advantage; use `model.coef_` against ground truth.
+- **Not pinning Python/dependency versions** → others can't reproduce results. uv lockfile + `random_state` together.
+
+## Acceptance checklist
+
+- [ ] Use `default_rng(seed=42)` to synthesize a regression dataset and split train/test.
+- [ ] In Jupyter, `describe()` + plot distributions + check correlation; say which feature is most correlated.
+- [ ] Train a linear regression, check `model.coef_` against the true coefficients, and verify the model learned the relationship.
+- [ ] Compute RMSE and R² on the **test set**, and explain why you can't look at train metrics only.
+- [ ] Plot residuals and judge whether there's systematic bias.
+- [ ] Distill the exploration into `train.py` with a fixed seed and `if __name__ == "__main__"`, run it with `uv run`.
+- [ ] Change the seed, explain which results change and which don't, and describe the boundary of reproducibility.
+
+## Summary
+
+- An ML experiment is a chain: read → clean → explore → split → train → evaluate → review, each step using a tool from the previous six guides.
+- Reproducibility rests on two things: a uv lockfile for dependencies (environment guide) + fixed seeds for randomness (splits, initialization).
+- Evaluation must use the test set; residual plots surface problems a single number can't (the visualization guide's "see errors").
+- Explore in Jupyter, distill into a script when mature (the jupyter guide's engineering transition) — with this chain landed, main thread A has a foothold for diving into ML principles.

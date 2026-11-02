@@ -3,4 +3,161 @@ title: Pandas 数据处理
 description: 数据读取、清洗、聚合与转换
 ---
 
-# Pandas 数据处理
+NumPy 教你算，Pandas 教你管数据。ML 的训练数据极少是干净的 `np.array`——它们是带表头、有缺失、类型混杂的 CSV，是"用户 id 对不上、日期格式乱、某列一半是 NaN"的真实表格。Pandas 就是处理这种结构化数据的工具：读进来、洗干净、按需变形、喂给模型。本篇聚焦 ML 数据准备的高频操作，不铺陈全部 API。
+
+## 为什么 ML 用 Pandas：DataFrame = 带标签的二维表
+
+NumPy 的 ndarray 是"纯数组"，靠整数位置索引。真实数据有列名、有行标签、有混合类型（id 是整数、姓名是字符串、金额是浮点）。Pandas 的 **DataFrame** 就是为这种数据设计的：每一列可以有不同 dtype，每列有名字、每行有标签（index）。
+
+```python
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv("users.csv")     # 读 CSV 成 DataFrame
+df.head()                         # Jupyter 里直接显示前 5 行表格
+df.shape                          # (行数, 列数)
+df.columns                        # 列名
+df.dtypes                         # 每列的 dtype
+```
+
+Pandas 建在 NumPy 之上：每列内部就是个 ndarray。所以 NumPy 的向量化、广播在 Pandas 里同样适用——`(df["price"] - df["price"].mean()) / df["price"].std()` 就是标准化的写法。Jupyter 里 `df.head()` 一敲就看到表格，是数据探索的起点。
+
+## 读取与写出
+
+```python
+pd.read_csv("data.csv")                       # 读 CSV，自动推断表头和类型
+pd.read_csv("data.csv", parse_dates=["date"])  # 把 date 列解析成日期类型
+pd.read_excel("data.xlsx", sheet_name="train") # Excel
+pd.read_json("data.json", lines=True)         # JSONL（每行一个 JSON，LLM 数据常见）
+pd.read_parquet("data.parquet")               # Parquet，列存压缩，大数据首选
+
+df.to_csv("out.csv", index=False)             # 写出，index=False 不把行索引当一列写进去
+df.to_parquet("out.parquet")                   # 写 Parquet
+```
+
+ML 里 Parquet 比 CSV 越来越常用：体积小、读快、保留 dtype（CSV 读回来常丢失类型要重新指定）。读 CSV 最大的坑是类型推断不准——某列混了数字和字符串会被判成 `object`（存的是 Python 对象，不是紧凑数组），后续算不动。养成 `df.dtypes` 看一眼的习惯。
+
+## 选行选列：loc 与 iloc
+
+这是 Pandas 的新手最大障碍，讲清两种索引：
+
+- `loc` —— 用**标签**（列名、行索引值）索引，**闭区间**
+- `iloc` —— 用**位置**（整数下标）索引，**左闭右开**（和 Python 切片一致）
+
+```python
+df["price"]                       # 选一列，返回 Series
+df[["price", "qty"]]              # 选多列，返回 DataFrame
+
+df.loc[0]                         # 行索引值为 0 的那一行（标签）
+df.loc[:, "price"]                # 所有行 + price 列
+df.loc[2:5, "price":"qty"]        # 行标签 2 到 5（含！），列 price 到 qty（含）
+
+df.iloc[0]                        # 第 0 行（位置）
+df.iloc[2:5]                      # 第 2、3、4 行（不含 5）
+df.iloc[[0, 2]]                   # 第 0、2 行
+```
+
+记不住时记一条：**`loc` 用标签且含两端，`iloc` 用位置且不含尾**。混用是 Pandas bug 常见源——`df.loc[2:5]` 含 5，`df.iloc[2:5]` 不含 5，结果差一行不报错。
+
+## 缺失值：isna / fillna / dropna
+
+真实数据一定有缺失——CSV 空单元格、某字段可选、采集失败。Pandas 用 `NaN`（float）/ `NaT`（时间）/ `pd.NA`（新类型）表示缺失。缺失值不处理直接喂模型会炸或被当成数值乱算。
+
+```python
+df.isna().sum()                   # 每列缺失数，第一步永远是看这个
+df.dropna()                       # 丢掉任何含缺失的行
+df.dropna(subset=["age"])         # 只看 age 列的缺失
+df.fillna(0)                      # 填 0
+df["age"].fillna(df["age"].median())   # 填中位数（比均值抗异常值）
+df["category"].fillna("unknown")      # 分类列填占位值
+```
+
+缺失处理在 ML 里没有银弹：丢行会丢数据、填常数会扭曲分布、填统计量要小心——**填什么取决于这列为什么缺、模型对缺失敏感度如何**。机器学习章节会专门讲，这里先记住：先 `isna().sum()` 摸清，别盲目 `fillna(0)`。
+
+## 类型转换：astype 与 category
+
+CSV 读进来类型常不对，需要手动转。Pandas 类型多源于 NumPy：`int64`/`float64`/`bool`/`object`（字符串等）/`datetime64`。
+
+```python
+df["price"] = df["price"].astype(float)          # 转浮点
+df["id"] = df["id"].astype(str)                  # 数字转字符串（id 不该参与算术）
+df["flag"] = df["flag"].astype(bool)
+
+df["city"] = df["city"].astype("category")       # 低基数的分类列转 category
+df["city"].cat.codes                              # 整数编码
+df["city"].cat.categories                         # 类别列表
+```
+
+**`category` 类型**是 ML 数据准备的利器：城市、性别、商品类目这种取值有限的列，默认存成 `object`（每个值一个字符串对象，浪费内存），转成 `category` 后存整数编码 + 类别表，内存省一个数量级，且很多 ML 库能直接吃 `category`。
+
+类型转不动常因数据脏：`astype(float)` 遇到 `"abc"` 会报错。先用 `pd.to_numeric(df["price"], errors="coerce")` 把转不动的变成 NaN，再按缺失值处理。
+
+## 过滤与派生列：向量化思维
+
+```python
+# 过滤：布尔 Series 当索引
+expensive = df[df["price"] > 100]
+active = df[(df["status"] == "active") & (df["age"] > 18)]   # 多条件用 & | ~，必须加括号
+
+# 派生列：向量化，别写 apply 行循环
+df["total"] = df["price"] * df["qty"]                       # 向量化运算
+df["is_expensive"] = df["price"] > 100                      # 布尔列
+df["log_price"] = np.log1p(df["price"])                     # NumPy 函数直接用
+```
+
+最大误区是**把 Pandas 当 Excel 用 `apply` 逐行算**——`df.apply(lambda r: r["price"]*r["qty"], axis=1)` 又慢又难读。能用向量化就向量化（`df["price"] * df["qty"]`），快几十到几百倍。实在要逐行复杂逻辑用 `np.where` 或 `np.select`，最后才考虑 `apply`。
+
+## 分组聚合：groupby
+
+"按城市算平均客单价""按用户算购买次数"——ML 特征工程的核心操作。
+
+```python
+df.groupby("city")["price"].mean()                    # 每个城市平均价格
+df.groupby("city")["price"].agg(["mean", "median", "count"])  # 多个聚合
+df.groupby(["city", "status"])["price"].sum()         # 多列分组
+df.groupby("city").agg(total=("price","sum"), n=("id","count"))  # 命名聚合
+```
+
+`groupby` 的思维：**split-apply-combine**——按某列拆分、每组算一个统计量、合并回结果。特征工程里"每个用户的统计特征"全是这套：按 `user_id` groupby，算均值/求和/计数/最大值，当作该用户的特征。
+
+## 合并：merge 与 concat
+
+```python
+pd.merge(users, orders, on="user_id")                    # 内连接，按 user_id
+pd.merge(users, orders, on="user_id", how="left")         # 左连接，保留左表所有行
+pd.merge(users, orders, left_on="id", right_on="user_id") # 两表列名不同
+
+pd.concat([df1, df2])                # 上下拼接（行）
+pd.concat([df1, df2], axis=1)        # 左右拼接（列）
+```
+
+`merge` 是 SQL 式连接，做"用户表 + 订单表合成训练样本"。`how` 决定保留哪些行——`inner`（默认，交集）、`left`、`right`、`outer`（并集）。连不上会产生 NaN，记得事后 `isna()` 检查。
+
+## 常见误区
+
+- **`loc` / `iloc` 混用** → 标签含两端、位置不含尾，混了差一行不报错。记牢区别。
+- **`fillna(0)` 滥用** → 数值列填 0 可能被当真值，分类列填 0 无意义。先看为什么缺。
+- **`object` 列当数值算** → CSV 类型推断成 `object`，`df["price"].mean()` 报错或乱算。`pd.to_numeric(errors="coerce")` 转。
+- **`apply` 逐行代替向量化** → 慢几十倍。能用 `df["a"] * df["b"]` 就别 `apply`。
+- **`groupby` 忘了选列** → `df.groupby("city")` 单独没意义，要 `.agg(...)` 或 `["col"].mean()`。
+- **改了视图没动原表** → `df[df["x"]>0]` 返回副本，`filtered["y"] = 1` 改不到 `df`；要改原表用 `df.loc[mask, "y"] = 1`。
+- **`SettingWithCopyWarning` 忽略** → Pandas 警告你正在改一个可能不确定是视图还是副本的对象；用 `loc` 显式赋值可避免。
+- **大表用 CSV 反复读写** → 体积大、类型丢。大数据用 Parquet。
+
+## 实践验收
+
+- [ ] 读一个真实 CSV，`isna().sum()` 看每列缺失，说出处理策略。
+- [ ] 用 `loc` 和 `iloc` 分别选第 3 到 5 行的 price 列，解释结果差异（含/不含尾）。
+- [ ] 把 object 类型的价格列用 `pd.to_numeric(errors="coerce")` 转 float，处理掉残留 NaN。
+- [ ] 用向量化（非 apply）派生一列 `total = price * qty`，并用 `%time` 对比 apply 版本。
+- [ ] 按 `city` groupby 计算 price 的均值/中位数/计数，存成新 DataFrame。
+- [ ] 用 `merge` 把用户表和订单表按 `user_id` 左连接，检查连接后产生的 NaN。
+- [ ] 把低基数分类列转成 `category`，对比 `object` 版本的内存占用（`df.memory_usage()`）。
+
+## 小结
+
+- DataFrame 是带标签的二维表，每列一个 dtype；建在 NumPy 上，向量化/广播同样适用。
+- `loc` 用标签含两端、`iloc` 用位置不含尾，混用是 Pandas bug 高发区。
+- 缺失值先 `isna().sum()` 摸清再决定策略，别盲目 `fillna(0)`。
+- 能向量化就别 `apply` 逐行，慢几十倍；`groupby` 是特征工程 split-apply-combine 的核心。
+- 大数据用 Parquet 保 dtype，CSV 读回常类型丢失需重转。
